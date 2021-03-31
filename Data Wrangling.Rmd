@@ -6,6 +6,7 @@ output: html_document
 ---
 ```{r include=FALSE}
 library(tidyverse)
+library(dslabs)
 ```
 
 - Spreadsheet files have data stored in rows & columns. If that spreadsheet is opened with a normal text editor the "ROWS" will be separated by "Enter" & the columns will be separated by "," or ";" or " ". It may either also contain a header or not. NOTE: Excel sheets can't be viewed with a text editor.
@@ -127,5 +128,76 @@ dat %>% separate(key, c("year", "variable_name"), sep = "_", extra = "merge")
 - This looks better but still i need to have separate columns for each variable. In this case i can use the `spread()` function i used before.
 ```{r}
 dat %>% separate(key, c("year", "variable_name"), sep="_", extra = "merge") %>% spread(variable_name, value)
+```
+
+- Lets say we have the data in the format we need but we want to combine data in 2 separate tables. For Example, lets say we want to combine data from the "muders" dataset with data from the "US elections dataset". One of the problems we could encounter would be that some states could be missing from one of the tables. In the example below, this is not the case as both datasets have the same states. We will see how these tables are joined below & then we will create another scenario where some states will be missing and we will see what could be the possible solutions for that situiation.
+```{r}
+data(murders)
+head(murders)
+data("polls_us_election_2016")
+head(results_us_election_2016)
+identical(results_us_election_2016$state, murders$state)
+```
+
+```{r}
+tab<- left_join(murders, results_us_election_2016, by="state")
+head(tab)
+```
+
+- Now we will illustrate how rows might be missing from each table we want to join & we will see how we can fix this issue.We will take a few rows from each of the datasets above & we will explore what options do we have for combining.
+```{r}
+tab1<- slice(murders, 1:6) %>% select(state, population)
+tab1
+tab2<- slice(results_us_election_2016, c(1:3, 5, 7:8)) %>% select(state, electoral_votes)
+tab2
+```
+
+- **Option 1** would be to use `left_join()` to add electoral votes to whatever states are in "tab1"
+```{r}
+left_join(tab1, tab2)       # OR tab1 %>% left_join(tab2)
+```
+
+- **Option 2** would be to use `right_join()` to add the states in "tab1" to the electoral votes in "tab2"
+```{r}
+tab1 %>% right_join(tab2)
+```
+
+- **Option 3** would be to use `inner_join()` to keep only the states that have information from both tables & join them
+```{r}
+inner_join(tab1, tab2)
+```
+
+- **Option 4** would be to use `full_join()` to keep both tables as they are including the NA's & join them.
+```{r}
+full_join(tab1, tab2)
+```
+
+- **Option 5** would be to use `semi_join()` to keep only the data in tab1 that has corresponding data in tab2 *WITHOUT JOINING THEM*
+```{r}
+semi_join(tab1, tab2)
+```
+
+- **Option 6** would be to use `anti_join()` to keep in formation in tab1 that has NO corresponding data in tab2 *WITHOUT JOINING THEM*
+```{r}
+anti_join(tab1, tab2)
+```
+
+- Another way to combine data together is `bind_cols()` or `bind_rows()`. This "bind" function doesn't match data in either data frame to the other, it just add the columns or rows from one data frame to the other without any kind of matching. We will get an error only of the data frames or datasets i'm trying to combine don't match in length.Those are functions of the dplyr package & they produce the output in a "tibble" form. There are equivilant functions for those in base R `cbind()` & `rbind()` but those produce data frames or matrices as output.
+```{r}
+bind_cols(a=1:3, b=3:5)
+```
+```{r}
+# Using the same functions to bind data frames
+tab1<- tab[, 1:3]
+tab2<- tab[, 4:6]
+tab3<- tab[, 7:9]
+new_tab<- bind_cols(tab1, tab2, tab3)
+head(new_tab)
+```
+
+```{r}
+tab1<- tab[1:2,]
+tab2<- tab[3:4,]
+bind_rows(tab1, tab2)
 ```
 
