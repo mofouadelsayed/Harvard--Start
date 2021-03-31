@@ -1,0 +1,131 @@
+---
+title: "Data Wrangling"
+author: "MO"
+date: "30/03/2021"
+output: html_document
+---
+```{r include=FALSE}
+library(tidyverse)
+```
+
+- Spreadsheet files have data stored in rows & columns. If that spreadsheet is opened with a normal text editor the "ROWS" will be separated by "Enter" & the columns will be separated by "," or ";" or " ". It may either also contain a header or not. NOTE: Excel sheets can't be viewed with a text editor.
+
+- To know my current working directory in R `getwd()` & to change the working directory `setwd()`. NOTE: it's always better to provide a full path of the directory i want to change into because by default, if i don't do that, the system will look for files in my current working directory. Ex: `setwd("~/Desktop/HarvardX Data Science/6. Data Wrangling")`
+```{r}
+# For Example: to know the directory in which the "dslabs" package was installed & what files are in that directory i can do the following
+path<- system.file("extdata", package = "dslabs")
+path
+list.files(path)
+```
+
+- Now lets say i want to copy one of the above files to my working directory. I will define the file name i want to copy, then i will define the full path it's located in then i'll copy all that into my working directory. Then i can double check if the file was actually copied
+```{r}
+filename<- "murders.csv"
+fullpath<- file.path(path, filename)
+fullpath
+file.copy(fullpath, getwd())
+file.exists(filename)
+```
+
+- Tidyverse package includes functions to read data from Excel sheets directly. They are as follows:
+1. `read_excel`: auto detects the excel sheet format either "xls" or "xlsx"
+2. `read_xls`: reads files with "xls" format
+3. `read_xlsx`: reads files with "xlsx" format
+*NOTE:* The sheet function in the above functions specify the sheet to read.
+
+- I can use `read_lines("murders.csv", n_max=3) to read the first 3 lines in that file to know to double check if it has a header & if it's comma or semicolon separated.
+
+- Since i'm trying to import or read a "csv" file, i should use the function as below then i can normally use the `head()` function to check the first 6 lines
+```{r}
+dat<- read_csv(filename)
+```
+**OR**
+```{r}
+dat<- read_csv(fullpath)
+class(dat)
+```
+```{r}
+head(dat)
+```
+
+- All the above read functions are available in base R as well, but they all use "." instead of "_" in the function name & when the data is imported as data frames as opposed to tibbles in the tidyverse functions. and the strings are converted to factors.
+```{r}
+dat2<- read.csv(filename)
+class(dat2)
+```
+
+- To import files from the internet i have 2 options. I can either import or read the file directly from the "url" or i can download a copy on my computer.
+```{r eval=FALSE, include=FALSE}
+url <- "https://raw.githubusercontent.com/rafalab/dslabs/master/inst/extdata/murders.csv"
+dat <- read_csv(url)                              # To read the file directly from the url
+download.file(url, "murders.csv")                 # To download the file to my computer
+```
+
+- Plotting data as we used to do in the "Visualization" module worked so seamlessly because data was in "tidy" format, which means it was suitable for plotting because it was edited from it's raw format in a format that makes it easy to plot. For Example: every data point was in a different row, there was a header, etc.. below we can examine the raw data of the "gapminder" dataset.
+```{r}
+path <- system.file("extdata", package="dslabs")
+filename <- file.path(path,  "fertility-two-countries-example.csv")
+wide_data <- read_csv(filename)
+select(wide_data, country, `1960`:`1967`)         # To check the first 9 columns
+```
+
+- Now we need to reshape the "Raw" or "wide" data into a "tidy" format so that we can work with it in R. there are several functions in the "tidyr" package which is a part of the "tidyverse" package already that can do that. below we will explore some functions of that package.
+
+- First function we can use is the `gather()` function which will help us group all the year columns we have under one column & will add the relevant fertility data under those columns. This function takes 4 arguments `gather(1, 2, 3, 4)`. The third argument will be the columns i want to group under one column or title, The first argument will be that title or column name i want to group all other columns under & finally the second argument will be the data i want to include in that table. 
+```{r}
+new_tidy_data<- wide_data %>% gather(year, fertility, '1960' : '2015')
+head(new_tidy_data)
+
+# Since the ONLY column that was not gathered from the wide_data in the example above was the country,i can alternatively write the code like this. Both give the same result but that might help if there are more than 2 columns to gather.
+new_tidy_data<- wide_data %>% gather(year, fertility, -country)
+class(new_tidy_data$year)
+head(new_tidy_data)
+```
+
+- The fourth argument is a "convert" argument to convert "characters" into "integers". By examining the class of the "year" column in the data gathered above it appears to be a "character" although in the formatted data it was "integer". This is because the gather function assumes the columns contain characters" not "integers" unless the fourth argument is specified. in this case
+```{r}
+new_tidy_data<- wide_data %>% gather(year, fertility, -country, convert = TRUE)
+class(new_tidy_data$year)
+head(new_tidy_data)
+```
+
+-Now that the data is "tidy", I can generate a plot.
+```{r}
+new_tidy_data %>% ggplot(aes(year, fertility, color = country)) + geom_point()
+```
+
+- If for any reason i want to do the opposite, which is convert "tidy" data into "wide" data i can use the `spread()` function. it takes 2 arguments. First argument is the column that contains the data i want to spread & the second argument is the data i want to use to populate the table.
+```{r}
+new_wide_data<- new_tidy_data %>% spread(year, fertility)
+select(new_wide_data, country, '1960' : '1967')
+```
+
+- Now we can work on a "Raw" file data that needs a bit more work to be converted into "tidy" format. As seen below, the problem with this data is that it's "wide" and that the columns first row are the year & the variable type.
+```{r}
+path<- system.file("extdata", package = "dslabs")
+filename<- file.path(path, "life-expectancy-and-fertility-two-countries-example.csv")
+raw_dat<- read_csv(filename)
+select(raw_dat,1:5)
+```
+
+- First step would be to gather the columns as we did above
+```{r}
+dat<- raw_dat %>% gather(key, value, -country)
+head(dat)
+```
+
+- Second we need to separate the year & the variable types. To do this we can use the `separate()` function which takes 3 arguments. `separate(1,2,3)` First argument is the name of the column to be separated, Second argument is the names to be used for the new columns & Third argument is the character that separates the variables i want to separate.
+```{r}
+dat %>% separate(key, c("year", "variable_name"), "_")
+```
+
+- The problem with the code above is that it removed the "_" separating the "life_expectancy" variable. In that case i can use the `extra` argument in the `separate()` function so that we can remove the first "_" between the year & the variable type only & keep all other "_" used in the columns.
+```{r}
+dat %>% separate(key, c("year", "variable_name"), sep = "_", extra = "merge")
+```
+
+- This looks better but still i need to have separate columns for each variable. In this case i can use the `spread()` function i used before.
+```{r}
+dat %>% separate(key, c("year", "variable_name"), sep="_", extra = "merge") %>% spread(variable_name, value)
+```
+
