@@ -201,4 +201,56 @@ tab2<- tab[3:4,]
 bind_rows(tab1, tab2)
 ```
 
-- Checking if will update
+- There are other functions or "set operators" that perform operations on data. Those functions can perform the same operations of data frames when "dplyr" package is loaded
+```{r}
+# Fuctions applied to simple vectors
+intersect (1:10, 6:15)                            # Intersect finds whats common
+intersect(c("a", "b", "c"), c("b", "c", "d"))
+union(1:10, 6:15)
+union(c("a", "b", "c"), c("b", "c", "d"))         # Union combines the data together without duplicates
+setdiff(1:10, 6:15)                               # Setdiff tells us the difference between the first argument & the                                                      second. This function is not symmetric
+setdiff(6:15, 1:10)
+setequal(1:5, 1:6)                                # Tells us if 2 sets are equal regardless of order
+setequal(1:5, 5:1)
+```
+```{r}
+# Functions applied to data frames
+tab1<- tab[1:5,]
+tab2<- tab[3:7,]
+intersect(tab1, tab2)
+union(tab1, tab2)                                 # Works when both data frames have the same columns
+setdiff(tab1, tab2)
+setequal(tab1, tab2)
+```
+
+- **WEB SCRAPING**
+
+- HTML: Hyper Text Markup Language. "rvest" is the package inside "tidyverse" that reades data from web pages. In the following example we will see how data for the "murders" dataset was imported from Wikipedia.
+```{r}
+library(rvest)
+url<- "https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state"        # NOTE the "" around the URL
+h<- read_html(url)
+h
+```
+
+- Aswe can see above, when we print "h" we cna't see much because the data in that web page is stored in "nodes" between "< >". This is how data is stored in tables in an HTML or XML document. XML: General Markup Language.Functions `html_nodes()` & `html_node()` are functions within "rvest" that extracts the data from within the nodes iin an HTML document. First one extracts ALL nodes from that type, the second one extracts only the first node it sees from that type. For example, the node type on that page is "table"
+```{r}
+tab<- h %>% html_nodes("table")
+tab<- tab[[2]]
+tab
+```
+
+- As we can see above, that's completely useless. So now there's another useful function `html_table()` that converts the data into a data frame.
+```{r}
+tab<- tab %>% html_table
+class(tab)
+head(tab)
+```
+
+- Getting Closer.. since the column names are long, we can assign new column names & check again
+```{r}
+tab<- tab %>% setNames(c("State", "Population", "Total", "Murders", "Gun_Murders", "Gun_Ownership", "Total_Rate", "Gun_Murder_Rate"))
+head(tab)
+```
+
+- Now 
