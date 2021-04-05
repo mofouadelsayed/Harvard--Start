@@ -282,6 +282,7 @@ cat(s)
 ```
 
 - Now returning to work on the "muders_raw" dataset, `stringr` package includes the functions needed to work on tydying the data in that table for example to remove the commas included in numbers. Functions of this package always start with "str_" so i can type the str_ part then hit "tab" & R will show all available functions of that package.
+**NOTE:** Refer to page 444 of the text book for a table of str_ functions & their description.
 ```{r}
 # The code below is supposed to show Identify which columns include numbers with ","
 identify_commas<- function(x) any(str_detect(x, ","))
@@ -351,4 +352,150 @@ sum(is.na(x))
 reported_heights %>% mutate(new_height = as.numeric(height)) %>% filter(is.na(new_height)) %>% head(n=10)
 ```
 
-- Case study 2 video. start identifying the patterns of input resulting in NA's.
+- Looking at the results of the code above, we can see that there are several entries that have patterns that can be easily converted to our desired input in inches. Now we can write a function to isolate those entries to plan how we can start converting them to what we want.
+```{r}
+not_inches<- function(x, smallest=50, tallest=84){
+  inches<- suppressWarnings(as.numeric(x))
+  ind<- is.na(inches) | inches< smallest | inches > tallest
+  ind
+}
+
+# Now we can apply the above function to quickly check how many entries have problems. This line of code can also be replaced by the following which will give the same result `problems<- reported_heights %>% filter(not_inches(height)) %>% .$height
+problems<- reported_heights %>% filter(not_inches(height)) %>% pull(height)
+length(problems)
+problems
+```
+
+- If we examine "problems" closely, we will see common patterns that we can isolate & fix. Below are a couple of examples then we will study that in detail.
+```{r}
+# Identify x'y or x'y'' or x'y"
+pattern<- "^\\d\\s*'\\s*\\d{1,2}\\.*\\d*'*\"*$"
+str_subset(problems, pattern) %>% head(n=10) %>% cat
+
+# Identify x.y or x,y
+pattern2<- "^[4-6]\\s*[\\.|,]\\s*([0-9]|10|11)$"
+str_subset(problems, pattern2) %>% head(n=10) %>% cat
+
+# Identify cm
+ind<- which(between(suppressWarnings(as.numeric(problems))/2.54, 54, 81))
+ind<- ind[!is.na(ind)]
+problems[ind] %>% head(n=10) %>% cat
+```
+
+- Now lets work on detecting entries including "cm" or "inches". Step 1 would identify "cm", then step 2 would be to detect if the input includes cm or inches with OR indicated by "|". This example builds 2 variables : "yes" & "no" with different inputs then we see how we can detect different patterns in those variables.
+```{r}
+# Step 1:
+str_subset(reported_heights$height, "cm")
+# Step 2:
+yes<- c("180 cm", "70 inches")
+no<- c("180", "70''")
+s<- c(yes, no)
+
+str_detect(s, "cm|inches")                    # "|" is used to signify "OR"
+```
+
+- Now we will have another example where we will detect a certain pattern in a string, this time will be detecting a digit. In R, a digit is signified by \\d. 
+```{r}
+yes<- c("5", "6", "5'10", "5 feet", "4'11")
+no<- c("", ".", "Five", "six")
+a<- c(yes, no)
+pattern<- "\\d"
+str_detect(a, pattern)
+```
+
+- `str_view()` shows the first time a digit is identified & `str_view_all()` shows ALL the times a digit is identified
+```{r}
+str_view(a, pattern)
+str_view_all(a, pattern)
+```
+
+- Note that while using the regex functions "str_" to detect patterns we always define a "yes" & "no" variables to test if our pattern detection is working correctly. 
+
+- We use character classes denoted by [] to define a series of characters that we need to look for. If we want to look for characters 5 & 6, then we can check the first example. If we want to look for a range of characters then we can check the second example. **NOTE:** In regex, everything is a character, there are no numbers. Therefore, if i enter the regex as[1-20], this will not look for numbers from 1 to 20, but it will look for the "characters" 1,2,0.
+```{r}
+# Example 1:
+str_view(a, "[56]")
+
+# Example 2:
+yes<- as.character(4:7)
+no<- as.character(1:3)
+s<- c(yes, no)
+str_detect(s, "[4-7]")
+```
+
+- In order so specify a beginning & an end of a pattern we need to use "Anchors". "^" represent the beginning of a string & "$" represent the end. So in order to look for a string containing ONLY ONE digit it will be written as `^\\d$`. To test that pattern:
+```{r}
+pattern<- "^\\d$"
+yes<- c("1", "5", "9")
+no<- c("12", "123", " 1", "a4", "b")
+b<- c(yes, no)
+str_view(b, pattern)
+```
+
+- In order to specify how many times a specific digit can occur we would need to enter how many digits we expect our number to be within curly brakets{}. For Example, we know that inches in the heights column could only be wither 1 or 2 digits.. nothing more. In that case the pattern we would be looking for would be `^\\d{1,2}$`.
+```{r}
+pattern<- "^\\d{1,2}$"
+yes<- c("1", "5", "9", "12")
+no<- c("123", "a4", "b")
+str_view(c(yes, no), pattern)
+```
+
+- Now in order to look for the common input pattern of x'y", we can use the following pattern `"^[4-7]'\\d{1,2}\"$"`. This tells us that we are looking for a pattern of digit 4-7 followed by ' followed by 1 or 2 digits followed by ".
+```{r}
+pattern<- "^[4-7]'\\d{1,2}\"$"
+yes<- c("5'7\"", "6'2\"", "5'12\"")
+no<- c("6,2\"", "6.2\"", "I am 5'11\"", "3'2\"", "64")
+str_detect(yes, pattern)
+str_detect(no, pattern)
+```
+
+- Returning to the "problems" variable we extracted from the heights column of the reported heights dataset, we want to see how many of those problematic entries fir the pattern above. This shows that only a few entries follow the described pattern.
+```{r}
+pattern<- "^[4-7]'\\d{1,2}\"$"
+sum(str_detect(problems, pattern))
+```
+
+- Checking for entries with the words "inches"
+```{r}
+str_subset(problems, "inches")
+```
+
+- Checking for entries using siglw quotes 2 times to denot inches
+```{r}
+str_subset(problems, "''") %>% cat
+```
+
+- In order to solve that we can replace all that with a standard pattern `x'y` where feet is denoted by ' & inches is not denoted by anything. Therefore; we can update the pattern to be `pattern<- "^[4-7]'\\d{1,2}$"`. If we clean up the data to replace all unwated symbols to fit our pattern, we will get more matches to our pattern.
+```{r}
+pattern<- "^[4-7]'\\d{1,2}$"
+problems %>% str_replace("feet|ft|foot", "'") %>% str_replace("inches|in|''|\"", "") %>% str_detect(pattern) %>% sum
+```
+
+- Another issue with this data is "space". Space is represented with `\\s` in R. So in order to include a space in our pattern
+```{r}
+pattern2<- "^[4-7]'\\s\\d{1,2}\"$"
+str_subset(problems, pattern2) %>% cat
+```
+
+- But the problem with the above is that R will look for a space after feet. If there are no speces then it will not be detected, this is a problem because it means i will have to write two patterns for looking for spaces. But regex has a useful tool which is called "Quantifiers". This is used to quantify or designate if the symboll i'm looking for exists or not. For Example: * after a symbol like \\s will indicate that this pattern will search for a space that could occur Zero OR more instances.
+```{r}
+yes<- c("AB", "A1B", "A11B", "A111B", "A1111B")
+no<- c("A2B", "A21B")
+str_detect(yes, "A1*B")
+str_detect(no, "A1*B")
+```
+
+- Similar Quantifiers include "?" represents none or once, "+" represents one or more. Here's a comparison
+```{r}
+data.frame(string=c("AB", "A1B", "A11B", "A111B", "A1111B"),
+           none_or_more = str_detect(yes, "A1*B"),
+           none_or_once = str_detect(yes, "A1?B"),
+           once_or_more = str_detect(yes, "A1+B"))
+```
+
+- Further impproving our pattern after adding what we've learned above
+```{r}
+pattern<- "^[4-7]\\s*'\\s*\\d{1,2}$"
+problems %>% str_replace("feet|ft|foot", "'") %>% str_replace("inches|in|''|\"", "") %>% str_detect(pattern) %>% sum
+```
+
