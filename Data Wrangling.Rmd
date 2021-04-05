@@ -203,12 +203,12 @@ bind_rows(tab1, tab2)
 
 - There are other functions or "set operators" that perform operations on data. Those functions can perform the same operations of data frames when "dplyr" package is loaded
 ```{r}
-# Fuctions applied to simple vectors
+# Functions applied to simple vectors
 intersect (1:10, 6:15)                            # Intersect finds whats common
 intersect(c("a", "b", "c"), c("b", "c", "d"))
 union(1:10, 6:15)
 union(c("a", "b", "c"), c("b", "c", "d"))         # Union combines the data together without duplicates
-setdiff(1:10, 6:15)                               # Setdiff tells us the difference between the first argument & the                                                      second. This function is not symmetric
+setdiff(1:10, 6:15)                               # Setdiff tells us the difference between the first argument & the                                                                        second. This function is not symmetric
 setdiff(6:15, 1:10)
 setequal(1:5, 1:6)                                # Tells us if 2 sets are equal regardless of order
 setequal(1:5, 5:1)
@@ -223,34 +223,132 @@ setdiff(tab1, tab2)
 setequal(tab1, tab2)
 ```
 
-- **WEB SCRAPING**
+- ## **WEB SCRAPING**
 
-- HTML: Hyper Text Markup Language. "rvest" is the package inside "tidyverse" that reades data from web pages. In the following example we will see how data for the "murders" dataset was imported from Wikipedia.
+- HTML: Hyper Text Markup Language. "rvest" is the package inside "tidyverse" that reads data from web pages. In the following example we will see how data for the "murders" dataset was imported from Wikipedia.
 ```{r}
 library(rvest)
 url<- "https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state"        # NOTE the "" around the URL
 h<- read_html(url)
+class(h)
 h
 ```
 
-- Aswe can see above, when we print "h" we cna't see much because the data in that web page is stored in "nodes" between "< >". This is how data is stored in tables in an HTML or XML document. XML: General Markup Language.Functions `html_nodes()` & `html_node()` are functions within "rvest" that extracts the data from within the nodes iin an HTML document. First one extracts ALL nodes from that type, the second one extracts only the first node it sees from that type. For example, the node type on that page is "table"
+- As we can see above, when we print "h" we can't see much because the data in that web page is stored in "nodes" between "< >". This is how data is stored in tables in an HTML or XML document. XML: General Markup Language.Functions `html_nodes()` & `html_node()` are functions within "rvest" that extracts the data from within the nodes in an HTML document. First one extracts ALL nodes from that type, the second one extracts only the first node it sees from that type. For example, the node type on that page is "table"
 ```{r}
 tab<- h %>% html_nodes("table")
-tab<- tab[[2]]
+tab<- tab[[2]]                              # I think that's choosing the "wikitable sortable" type.
 tab
 ```
 
 - As we can see above, that's completely useless. So now there's another useful function `html_table()` that converts the data into a data frame.
 ```{r}
-tab<- tab %>% html_table
+tab<- tab %>% html_table()
 class(tab)
 head(tab)
 ```
 
 - Getting Closer.. since the column names are long, we can assign new column names & check again
 ```{r}
-tab<- tab %>% setNames(c("State", "Population", "Total", "Murders", "Gun_Murders", "Gun_Ownership", "Total_Rate", "Gun_Murder_Rate"))
+tab <- tab %>% setNames(c("state", "population", "total", "murders", "gun_murders", "gun_ownership", "total_rate", "murder_rate", "gun_murder_rate"))
 head(tab)
 ```
 
-- Now 
+- Now looking deeper into the data, one of the issues that stand out is that the population & the total variables are "characters" instead of numbers. This is because it's very common for web pages to use commas"," as separators for digits as it makes it easier to read. This is solved by the function `parse_number()`
+```{r}
+class(tab$population)
+class(tab$total)
+```
+
+- First we need to understand the following the concept. Strings in R are defined by either single quotes' or double quotes". If for example i want to write a string that already includes double quotes like 10" for example, i will need to use single quotes so i won't get an error `s<-'10"'`. In order to check this in R, i can use the function `cat()` in order to display the string as it is
+```{r}
+# In order to define a string having " i will need to use a single quote'
+s<- '10"'
+cat(s)
+s
+
+# In order to define a string having a ' i will need to use a double quote"
+s<- "5'"
+cat(s)
+
+# Now what if i want to use both.. What if i want to define a string 5'10". In this case i need to use \
+
+s<- '5\'10"'
+cat(s)
+
+s<- "5'10\""
+cat(s)
+
+```
+
+- Now returning to work on the "muders_raw" dataset, `stringr` package includes the functions needed to work on tydying the data in that table for example to remove the commas included in numbers. Functions of this package always start with "str_" so i can type the str_ part then hit "tab" & R will show all available functions of that package.
+```{r}
+# The code below is supposed to show Identify which columns include numbers with ","
+identify_commas<- function(x) any(str_detect(x, ","))
+tab %>% summarize_all(list(identify_commas))
+
+```
+
+- Now i can use the `str_replace_all()` function to replace all commas with nothing then coerce the values to numeric. But also, as mentioned before, "readr" package includes function `parse_number()` that does the same thing & also coerces the values to numeric. In the example below the values are not identical because when using the `str_replace_all()` function then `as.numeric()` one value gives NA, but is converted normally using the `parse_number()` function.
+
+```{r}
+# Now i can use the `str_replace_all()` function to replace commas & coerce the values to be numbers. NOTE: NA is introduced by coercion because one number includes a footnote which is converted normally without problems using the `parse_number()` function.
+test_1<- str_replace_all(tab$population, ",", "")
+test_1<- as.numeric(test_1)
+head(test_1)
+```
+
+```{r}
+# Same as above but using `parse_number()`. NOT identical as NA was introduced in test_1
+test_2<- parse_number(tab$population)
+identical(test_1, test_2)
+```
+
+
+```{r}
+# Now mutating the whole dataset. `mutate_at() performs the transformation specified to the columns indicated
+murders_new<- tab %>% mutate_at(2:3, parse_number)
+head(murders_new)
+```
+
+- Looking at another example of web scraping, we want to extract the recipe name, total preparation time & list of ingredients from this foodnetwork page <https://www.foodnetwork.com/recipes/alton-brown/guacamole-recipe-1940609>. This is made possible by a software called "Selector Gadget" at <https://selectorgadget.com> which allows us to select which CSS selector we need in order to extract whatever information we need on a page that doesn't have a table like the example shown above. 
+```{r}
+# This determines which selectors we need based on the "Selector Gadget" software
+g<- read_html("https://www.foodnetwork.com/recipes/alton-brown/guacamole-recipe-1940609")
+recipe<- g %>% html_node(".o-AssetTitle__a-HeadlineText") %>% html_text()
+prep_time<- g %>% html_node(".m-RecipeInfo__a-Description--Total") %>% html_text()
+ingredients<- g %>% html_nodes(":nth-child(11) .o-Ingredients__a-Ingredient--CheckboxLabel , :nth-child(10) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(9) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(8) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(7) .o-Ingredients__a-Ingredient--CheckboxLabel, .o-Ingredients__a-Ingredient:nth-child(3) .o-Ingredients__a-Ingredient--CheckboxLabel, #mod-recipe-ingredients-1 :nth-child(2) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(6) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(5) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(4) .o-Ingredients__a-Ingredient--CheckboxLabel") %>% html_text()
+
+# Moving on to extract the data we want & create the list
+guacamole<- list(Recipe=recipe, Prep_time=prep_time, Ingredients=ingredients)
+guacamole
+```
+
+
+```{r}
+# Since ALL recipes on that website follow the same general layout, i can create a function that extracts data from that web page & use it to extract data from any recipe.
+get_recipe <- function(url){
+    a <- read_html(url)
+    recipe <- a %>% html_node(".o-AssetTitle__a-HeadlineText") %>% html_text()
+    prep_time <- a %>% html_node(".m-RecipeInfo__a-Description--Total") %>% html_text()
+    ingredients <- a %>% html_nodes(".m-RecipeInfo__a-Description--Total") %>% html_text()
+ingredients<- g %>% html_nodes(":nth-child(11) .o-Ingredients__a-Ingredient--CheckboxLabel , :nth-child(10) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(9) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(8) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(7) .o-Ingredients__a-Ingredient--CheckboxLabel, .o-Ingredients__a-Ingredient:nth-child(3) .o-Ingredients__a-Ingredient--CheckboxLabel, #mod-recipe-ingredients-1 :nth-child(2) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(6) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(5) .o-Ingredients__a-Ingredient--CheckboxLabel, :nth-child(4) .o-Ingredients__a-Ingredient--CheckboxLabel") %>% html_text()
+    return(list(Recipe = recipe, Prep_time = prep_time, Ingredients = ingredients))
+} 
+get_recipe("http://www.foodnetwork.com/recipes/food-network-kitchen/pancakes-recipe-1913844")
+```
+
+- Another example that we can work with is the "heights" dataset raw data in the dslabs package "reported_heights". Due to data input issues, the heights column ended up having non-numeric entries & therefore; is classified as character. We can try to coerce the data into numeric but this will result in a lot of NA's
+```{r}
+library(dslabs)
+data("reported_heights")
+class(reported_heights$height)
+x<- as.numeric(reported_heights$height)
+head(x)
+sum(is.na(x))
+
+# Now I can filter the results to know which entries resulted in NA after coercion
+reported_heights %>% mutate(new_height = as.numeric(height)) %>% filter(is.na(new_height)) %>% head(n=10)
+```
+
+- Case study 2 video. start identifying the patterns of input resulting in NA's.
