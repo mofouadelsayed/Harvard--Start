@@ -226,7 +226,7 @@ setequal(tab1, tab2)
 - ## **WEB SCRAPING**
 
 - HTML: Hyper Text Markup Language. "rvest" is the package inside "tidyverse" that reads data from web pages. In the following example we will see how data for the "murders" dataset was imported from Wikipedia.
-```{r}
+```{r warning=FALSE}
 library(rvest)
 url<- "https://en.wikipedia.org/wiki/Gun_violence_in_the_United_States_by_state"        # NOTE the "" around the URL
 h<- read_html(url)
@@ -477,7 +477,7 @@ pattern2<- "^[4-7]'\\s\\d{1,2}\"$"
 str_subset(problems, pattern2) %>% cat
 ```
 
-- But the problem with the above is that R will look for a space after feet. If there are no speces then it will not be detected, this is a problem because it means i will have to write two patterns for looking for spaces. But regex has a useful tool which is called "Quantifiers". This is used to quantify or designate if the symboll i'm looking for exists or not. For Example: * after a symbol like \\s will indicate that this pattern will search for a space that could occur Zero OR more instances.
+- But the problem with the above is that R will look for a space after feet. If there are no spaces then it will not be detected, this is a problem because it means i will have to write two patterns for looking for spaces. But regex has a useful tool which is called "Quantifiers". This is used to quantify or designate if the symbol i'm looking for exists or not. For Example: * after a symbol like \\s will indicate that this pattern will search for a space that could occur Zero OR more instances.
 ```{r}
 yes<- c("AB", "A1B", "A11B", "A111B", "A1111B")
 no<- c("A2B", "A21B")
@@ -493,9 +493,103 @@ data.frame(string=c("AB", "A1B", "A11B", "A111B", "A1111B"),
            once_or_more = str_detect(yes, "A1+B"))
 ```
 
-- Further impproving our pattern after adding what we've learned above
+- Further improving our pattern after adding what we've learned above
 ```{r}
 pattern<- "^[4-7]\\s*'\\s*\\d{1,2}$"
 problems %>% str_replace("feet|ft|foot", "'") %>% str_replace("inches|in|''|\"", "") %>% str_detect(pattern) %>% sum
 ```
 
+- The next large group of problematic entries were of the form x.y, x,y & x y. We need to change all those to our agreed upon format of x'y. But if we use search & replace for all those patterns we will have a problem with several entries like 70.5 which will change to 70'5. We can do this by defining a pattern with groups between () to identify the digits i want to extract. This enables us to extract 5.6 to 5'6 but don't change an entry of 70.2 inches. Below we will see the same pattern defined by both groups & non-groups methods.
+```{r}
+pattern_without_groups<- "^[4-7],\\d*$"
+pattern_with_groups<- "^([4-7]),(\\d*)$"            #NOTE: If i enter space after "," the result will be wrong.
+yes <- c("5,9", "5,11", "6,", "6,1")
+no <- c("5'9", ",", "2,8", "6.1.1")
+s <- c(yes, no)
+str_detect(s, pattern_without_groups)
+str_detect(s, pattern_with_groups)
+```
+
+- Now we can start extracting these entries after just detecting them in the above step. `str_match()` is a function that extracts the values identified in the pattern *defined by the groups* & displays it in 3 separate columns. First column is the original value, Second & third columns are the single digits we identified in the pattern separately. Function `str_extract()` only extracts the values identified by the pattern, not the values defined by the groups.
+```{r}
+str_match(s, pattern_with_groups)
+str_extract(s, pattern_with_groups)
+```
+
+- So in order to identify which group to use for a given action, `\\1` identifies  the first group & `\\2` identifies the second & so on. The below code identifies the pattern groups, then replaces those identified pattern groups with the format identified in the replace function last argument specifying to extract the first digit & enter a ' after it then extract the second digit with nothing after it.
+```{r}
+pattern_with_groups <-  "^([4-7]),(\\d*)$"
+yes <- c("5,9", "5,11", "6,", "6,1")
+no <- c("5'9", ",", "2,8", "6.1.1")
+s <- c(yes, no)
+str_replace(s, pattern_with_groups, "\\1'\\2") %>% cat
+```
+
+_ Combining what we learned above, we can create a pattern that gets closer to what we need in this step which is convert all the x.y, x,y & x y' patterns in the heights data. This pattern starts normal as looking for a digit between 4&7 followed by space or not, then a comma, dot or space as we indicated, then followed by a space or not then the second digit. The only problem here is the case of 5.25
+```{r}
+pattern_with_groups<- "^([4-7])\\s*[,\\.\\s+]\\s*(\\d*)$"
+str_subset(problems, pattern_with_groups) %>% head(n=15) %>% cat
+```
+
+- Creating a function to detect entries with problems then applying it to the reported heights dataset
+```{r}
+not_inches_or_cm <- function(x, smallest = 50, tallest = 84){
+    inches <- suppressWarnings(as.numeric(x))
+    ind <- !is.na(inches) &
+        ((inches >= smallest & inches <= tallest) |
+             (inches/2.54 >= smallest & inches/2.54 <= tallest))
+    !ind
+}
+
+problems <- reported_heights %>% 
+  filter(not_inches_or_cm(height)) %>%
+  .$height
+length(problems)
+```
+
+- Now we will convert the problematic entries to the desired pattern then we will see how much was fixed.
+```{r}
+converted <- problems %>% 
+  str_replace("feet|foot|ft", "'") %>%                                  # Convert feet symbols to '
+  str_replace("inches|in|''|\"", "") %>%                                # Remove inches symbols
+  str_replace("^([4-7])\\s*[,\\.\\s+]\\s*(\\d*)$", "\\1'\\2")           ## Change format
+
+# Show proportion of entries that fit the desired pattern after reformatting
+pattern <- "^[4-7]\\s*'\\s*\\d{1,2}$"
+index <- str_detect(converted, pattern)
+mean(index)                                                             # Shows converted proportion
+converted[!index]                                                       # Shows the remaining problems
+```
+- Examining the remaining problems, we can try to fix the remaining one by one. The first couple of cases are entries with feet only in the format of x or x'.
+```{r}
+yes<- c("5", "6", "5'")
+no<- c("5''", "5'4")
+s<- c(yes, no)
+str_replace(s, "^([4-7])'?$","\\1'0")
+```
+
+- Next challenge is converting entries with decimal places. In that case we will update the pattern to include the decimal places
+```{r}
+pattern<- "^[4-7]\\s*'\\s*(\\d+\\.?\\d*)$"
+```
+
+- Next would be detecting the entries entered as European commas in meters &converting into decimal.
+```{r}
+yes <- c("1,7", "1, 8", "2, " )
+no <- c("5,8", "5,3,2", "1.7")
+s <- c(yes, no)
+str_replace(s, "^([12])\\s*,\\s*(\\d*)$", "\\1\\.\\2")
+```
+
+- We can also trim or remove spaces entered at the beginning or the end of a string using the `str_trim()` function
+```{r}
+str_trim("5 ' 9 ")
+```
+
+- Converting a string to lower case
+```{r}
+s <- c("Five feet eight inches")
+str_to_lower(s)
+```
+
+- Start at section 24.10 in text book then after finishing, start videos with section 24.10.1
