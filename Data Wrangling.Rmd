@@ -592,4 +592,53 @@ s <- c("Five feet eight inches")
 str_to_lower(s)
 ```
 
-- Start at section 24.10 in text book then after finishing, start videos with section 24.10.1
+- Now lets combine what's above to see how far we go in terms of clearing the problematic entries
+```{r}
+convert_format<- function(s){
+  s %>%
+    str_replace("feet|foot|ft","'") %>%
+    str_replace_all("inches|in|''|\"cm|and","") %>%
+    str_replace("^([4-7])\\s*[,\\.\\s+]\\s*(\\d*)$","\\1'\\2") %>%
+    str_replace("^([56])'?$","\\1'0") %>%
+    str_replace("^([12])\\s*,\\s*(\\d*)$","\\1\\.\\2") %>%
+    str_trim()
+}
+```
+
+- Now we can write a function that converts words to numbers
+```{r}
+library(english)
+words_to_numbers<- function(s){
+  s<- str_to_lower(s)
+  for (i in 0:11)
+    s<- str_replace_all(s, words(i), as.character(i))
+  s
+}
+```
+
+- Combining all the above to see what's left from the problematic entries
+```{r}
+converted<- problems %>% words_to_numbers() %>% convert_format()
+remaining_problems<- converted[not_inches_or_cm(converted)]
+pattern<- "^[4-7]\\s*'\\s*\\d+\\.?\\d*$"
+index<- str_detect(remaining_problems, pattern)
+remaining_problems[!index]
+```
+
+- Previously we used the separate function to split the values of a certain column into two separate ones. Extract can do the same thing but also extracts those values. It's obvious below that extract works better than separate if patterns become a bit complecated as below.
+```{r}
+s<- c("5'10", "6'1\"", "5'8inches")
+tab<- data.frame(x=s)
+tab
+tab %>% separate(x, c("feet", "inches", sep="'"))
+
+# Extract
+library(tidyr)
+tab %>% extract(x,c("feet", "inches"), regex = "(\\d)'(\\d{1,2})")
+```
+
+- Putting it all together.. FINALLY !
+```{r}
+
+```
+
