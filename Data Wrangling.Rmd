@@ -616,6 +616,25 @@ words_to_numbers<- function(s){
 }
 ```
 
+- The above code can be replaced by the following
+```{r eval=FALSE, include=FALSE}
+words_to_numbers <- function(s){
+  str_to_lower(s) %>%  
+    str_replace_all("zero", "0") %>%
+    str_replace_all("one", "1") %>%
+    str_replace_all("two", "2") %>%
+    str_replace_all("three", "3") %>%
+    str_replace_all("four", "4") %>%
+    str_replace_all("five", "5") %>%
+    str_replace_all("six", "6") %>%
+    str_replace_all("seven", "7") %>%
+    str_replace_all("eight", "8") %>%
+    str_replace_all("nine", "9") %>%
+    str_replace_all("ten", "10") %>%
+    str_replace_all("eleven", "11")
+}
+```
+
 - Combining all the above to see what's left from the problematic entries
 ```{r}
 converted<- problems %>% words_to_numbers() %>% convert_format()
@@ -625,7 +644,7 @@ index<- str_detect(remaining_problems, pattern)
 remaining_problems[!index]
 ```
 
-- Previously we used the separate function to split the values of a certain column into two separate ones. Extract can do the same thing but also extracts those values. It's obvious below that extract works better than separate if patterns become a bit complecated as below.
+- Previously we used the separate function to split the values of a certain column into two separate ones. Extract can do the same thing but also extracts those values. It's obvious below that extract works better than separate if patterns become a bit complicated as below.
 ```{r}
 s<- c("5'10", "6'1\"", "5'8inches")
 tab<- data.frame(x=s)
@@ -639,6 +658,33 @@ tab %>% extract(x,c("feet", "inches"), regex = "(\\d)'(\\d{1,2})")
 
 - Putting it all together.. FINALLY !
 ```{r}
-
+pattern<- "^([4-7])\\s*'\\s*(\\d+\\.?\\d*)$"
+smallest<- 50
+tallest<- 84
+new_heights<- reported_heights %>%
+  mutate(original = height, height= words_to_numbers(height) %>% convert_format()) %>%
+  extract(height, c("feet", "inches"), regex= pattern, remove = FALSE) %>%
+  mutate_at(c("height", "feet", "inches"), as.numeric) %>%
+  mutate(guess=12*feet+inches) %>%
+  mutate(height= case_when(
+    !is.na(height) & between(height, smallest, tallest) ~ height,
+    !is.na(height) & between(height/2.54, smallest, tallest) ~ height/2.54,
+    !is.na(height) & between(height*100/2.54, smallest, tallest) ~ height*100/2.54,
+     !is.na(guess) & inches < 12 & between(guess, smallest, tallest) ~ guess,
+    TRUE ~ as.numeric(NA))) %>%
+      mutate(height= ifelse(is.na(height) & inches < 12 & between(guess, smallest, tallest), guess, height)) %>%
+      select(-guess)
+new_heights %>% head(n=20)
 ```
 
+- To check all converted entries
+```{r}
+new_heights %>% filter(not_inches(original)) %>% select(original, height) %>% arrange(height) %>% view()
+```
+
+- To check shortest students in our dataset
+```{r}
+new_heights %>% arrange(height) %>% head(n=7)
+```
+
+- I can try to combine all previous solutions & put it all together my way & see if i will get the same result or better. then start the first video in 3.3
