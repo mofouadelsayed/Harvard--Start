@@ -360,13 +360,13 @@ not_inches<- function(x, smallest=50, tallest=84){
   ind
 }
 
-# Now we can apply the above function to quickly check how many entries have problems. This line of code can also be replaced by the following which will give the same result `problems<- reported_heights %>% filter(not_inches(height)) %>% .$height
+# Now we can apply the above function to quickly check how many entries have problems. The below line of code can also be replaced by the following which will give the same result `problems<- reported_heights %>% filter(not_inches(height)) %>% .$height
 problems<- reported_heights %>% filter(not_inches(height)) %>% pull(height)
 length(problems)
 problems
 ```
 
-- If we examine "problems" closely, we will see common patterns that we can isolate & fix. Below are a couple of examples then we will study that in detail.
+- If we examine "problems" closely, we will see common patterns that we can isolate & fix. Below are a couple of examples then we will study in detail.
 ```{r}
 # Identify x'y or x'y'' or x'y"
 pattern<- "^\\d\\s*'\\s*\\d{1,2}\\.*\\d*'*\"*$"
@@ -687,4 +687,51 @@ new_heights %>% filter(not_inches(original)) %>% select(original, height) %>% ar
 new_heights %>% arrange(height) %>% head(n=7)
 ```
 
-- I can try to combine all previous solutions & put it all together my way & see if i will get the same result or better. then start the first video in 3.3
+- *String Splitting*. Ususally when we import a ".csv" file using `read_csv()` or `read.csv()` R separates values of each row separated by columns into columns. But to illustrate the uses of `str_split()` function we will assume we imported data with a different function `readLines()` that imports data is tables into lines of contiuous strings separated by a comma. Then we will try to separate or "split" those strings to make a data frame.
+```{r}
+filename<- system.file("extdata/murders.csv", package = "dslabs")
+lines<- readLines(filename)
+lines %>% head()
+```
+
+- So if we try to "split" the strings it will look like this which is not what we want
+```{r}
+x<- str_split(lines, ",")
+head(x)
+
+# To sepearate the column names only (headers)
+col_names<- x[[1]]
+x<- x[-1]                                             # This defines the data imported without the header
+```
+
+- In order ti extract the column number in the second argument of the function `map()`. But to force `map()` to return characters i can used `map_chr()` instead & use `map_int()` if i want integers.
+```{r}
+map(x,1) %>% head
+
+dat<- tibble(map_chr(x,1),
+             map_chr(x,2),
+             map_chr(x,3),
+             map_chr(x,4),
+             map_chr(x,5)) %>%
+  mutate_all(parse_guess) %>%
+  setNames(col_names)
+dat %>% head
+```
+
+- ALL the above steps could be replaced by the following which resturns a matrix istead of a list
+```{r}
+x<- str_split(lines, ",", simplify = TRUE)
+col_names<- x[1,]
+x<- x[-1,]
+colnames(x)<- col_names
+x %>% as_tibble() %>% mutate_all(parse_guess) %>% head(5)
+```
+
+**Extracting Tables from a PDF**
+
+- WE want to extract data from table S1 found on the PDF published on this website <http://www.pnas.org/content/112/40/12349.abstract>. Here's how 
+```{r}
+library(pdftools)
+
+```
+
