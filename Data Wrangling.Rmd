@@ -687,7 +687,7 @@ new_heights %>% filter(not_inches(original)) %>% select(original, height) %>% ar
 new_heights %>% arrange(height) %>% head(n=7)
 ```
 
-- *String Splitting*. Ususally when we import a ".csv" file using `read_csv()` or `read.csv()` R separates values of each row separated by columns into columns. But to illustrate the uses of `str_split()` function we will assume we imported data with a different function `readLines()` that imports data is tables into lines of contiuous strings separated by a comma. Then we will try to separate or "split" those strings to make a data frame.
+- *String Splitting*. Usually when we import a ".csv" file using `read_csv()` or `read.csv()` R separates values of each row separated by columns into columns. But to illustrate the uses of `str_split()` function we will assume we imported data with a different function `readLines()` that imports data is tables into lines of contiuous strings separated by a comma. Then we will try to separate or "split" those strings to make a data frame.
 ```{r}
 filename<- system.file("extdata/murders.csv", package = "dslabs")
 lines<- readLines(filename)
@@ -732,6 +732,11 @@ x %>% as_tibble() %>% mutate_all(parse_guess) %>% head(5)
 - WE want to extract data from table S1 found on the PDF published on this website <http://www.pnas.org/content/112/40/12349.abstract>. Here's how 
 ```{r}
 library(pdftools)
-
+library(stringr)
+download.file(url, "Trial.pdf")               # Download PDF file in url to wd
+txt<- pdf_text("Trial.pdf")                   # Convert PDF into text
+raw_data_research<- txt[2]                    # The item that contains the table in the text file
+table<- str_split(raw_data_research, "\n")    #
+table<- table[[1]]
 ```
 
