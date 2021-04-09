@@ -729,14 +729,80 @@ x %>% as_tibble() %>% mutate_all(parse_guess) %>% head(5)
 
 **Extracting Tables from a PDF**
 
-- WE want to extract data from table S1 found on the PDF published on this website <http://www.pnas.org/content/112/40/12349.abstract>. Here's how 
+- WE want to extract data from table S1 found on the PDF published on this website <http://www.pnas.org/content/112/40/12349.abstract>. Below are the steps to download the PDF, Save it to my WD, Extract the data & The first step in cleaning the data which is `str_split()`
 ```{r}
 library(pdftools)
 library(stringr)
+url<- "https://www.pnas.org/content/pnas/suppl/2015/09/16/1510159112.DCSupplemental/pnas.201510159SI.pdf?targetid=nameddest%3DST1"
 download.file(url, "Trial.pdf")               # Download PDF file in url to wd
+# To download PDF to a Windows system use `download.file(url, "Trial.pdf", mode="wb")
 txt<- pdf_text("Trial.pdf")                   # Convert PDF into text
 raw_data_research<- txt[2]                    # The item that contains the table in the text file
-table<- str_split(raw_data_research, "\n")    #
-table<- table[[1]]
+table<- str_split(raw_data_research, "\n")    # Splits long lines of strings separated by "\n"" into columns
+table<- table[[1]]                            # I think the [[]] converts "table" from list to a value
+table
+```
+
+- By observing the output of the result above, we see that the column names are in the third & fourth entries
+```{r}
+the_names_1<- table[3]
+the_names_1
+the_names_2<- table[4]
+the_names_2
+```
+
+- Looking at `the_names_1` above we notice that we need to separate things. 1.We need to remove all the space before "Applications" & 2. We need to remove everything after the comma.
+```{r}
+the_names_1<- the_names_1 %>% str_trim()                               #1. Removes ALL spaces before Entries
+the_names_1
+the_names_1<- the_names_1 %>% str_replace_all(",\\s.", "")             # str_replace only replaces the fisrt column
+the_names_1
+the_names_1<- the_names_1 %>% str_split("\\s{2,}", simplify = TRUE)    # \\s{2,} represents 2 OR MOre spaces
+the_names_1
+```
+
+- Looking at `the_names_2` we need to also remove the leading space & split
+```{r}
+the_names_2<- the_names_2 %>% str_trim() %>% str_split("\\s+", simplify = TRUE)
+the_names_2
+```
+
+- Now I need to combine those two headers to match the data in the PDF. The `str_c()` joins two or more vectors into a single character vector. `rep(the_names_1, each=3)` creates 3 duplicates from the header `the_names_1`. The First line of code therefore; duplicates the first header 3 times then it combines it woth the second header excluding the "Discipline" column. The Second line of code then adds the first column back into the table. The Third line of code then changes all to lower case then replaces the space with another"_"
+```{r}
+the_names<- str_c(rep(the_names_1, each=3), the_names_2[-1], sep = "_")
+the_names<- c(the_names_2[1], the_names)
+the_names
+the_names<- the_names %>% str_to_lower() %>% str_replace_all("\\s", "_")
+the_names
+```
+- Now working on the data in the table itself. when trying to examine the data in "table" & compare it to the PDF, it's found that the data populating the table will be probably in rows 6 to 14. In the first line of code we can trim all spaces & split data whenever there are spaces. Then the second line of code creates a data frame then adds the headers then changes the data populating the table to numbers except for the first column.
+```{r}
+new_raw_data_research<- table[6:14] %>% str_trim() %>% str_split("\\s{2,}", simplify = TRUE)
+new_raw_data_research
+new_raw_data_research<- new_raw_data_research %>% data.frame(stringsAsFactors = FALSE) %>% setNames(the_names) %>% mutate_at(-1, parse_number)
+new_raw_data_research
+new_raw_data_research %>% as_tibble()       # The only difference i observed was it looks better in console !
+```
+
+- Another useful function to use in general would be the `recode()` function in the tidyverse package. Function `case_when()` is less efficient as it does the same thing but we will need to it one by one if this variable is repeated more than once in a datset. The `recode()` function changes that categorical variable name throught the whole dataset all at aonce. Below is an example of a plot from the "gapminder" dataset in which the variable names of the Caribbean countries could be recoded for shorter ones as they take a lot of space in the plot. 
+```{r}
+library(dslabs)
+data("gapminder")
+gapminder %>% filter(region=="Caribbean") %>% ggplot(aes(year, life_expectancy, color=country)) + geom_line()
+```
+
+- To see how many Variable have long names (>12 characters)
+```{r}
+gapminder %>% filter(region=="Caribbean") %>% filter(str_length(country) >=12) %>% distinct(country)
+```
+
+- Now to recode the names so that they're shorter
+```{r}
+gapminder %>% filter(region=="Caribbean") %>% mutate(country= recode(country,
+                                                                     `Antigua and Barbuda`= "Barbuda",
+                                                                     `Dominican Republic`= "DR",
+                                                                     `St. Vincent and the Grenadines`= "St. Vince",
+                                                                     `Trinidad and Tobago`= "Trinidad")) %>% 
+  ggplot(aes(year, life_expectancy, color=country)) + geom_line(size=1)
 ```
 
