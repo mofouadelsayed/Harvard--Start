@@ -687,7 +687,7 @@ new_heights %>% filter(not_inches(original)) %>% select(original, height) %>% ar
 new_heights %>% arrange(height) %>% head(n=7)
 ```
 
-- *String Splitting*. Usually when we import a ".csv" file using `read_csv()` or `read.csv()` R separates values of each row separated by columns into columns. But to illustrate the uses of `str_split()` function we will assume we imported data with a different function `readLines()` that imports data is tables into lines of contiuous strings separated by a comma. Then we will try to separate or "split" those strings to make a data frame.
+- *String Splitting*. Usually when we import a ".csv" file using `read_csv()` or `read.csv()` R separates values of each row separated by columns into columns. But to illustrate the uses of `str_split()` function we will assume we imported data with a different function `readLines()` that imports data is tables into lines of continuous strings separated by a comma. Then we will try to separate or "split" those strings to make a data frame.
 ```{r}
 filename<- system.file("extdata/murders.csv", package = "dslabs")
 lines<- readLines(filename)
@@ -784,14 +784,14 @@ new_raw_data_research
 new_raw_data_research %>% as_tibble()       # The only difference i observed was it looks better in console !
 ```
 
-- Another useful function to use in general would be the `recode()` function in the tidyverse package. Function `case_when()` is less efficient as it does the same thing but we will need to it one by one if this variable is repeated more than once in a datset. The `recode()` function changes that categorical variable name throught the whole dataset all at aonce. Below is an example of a plot from the "gapminder" dataset in which the variable names of the Caribbean countries could be recoded for shorter ones as they take a lot of space in the plot. 
+- Another useful function to use in general would be the `recode()` function in the tidyverse package. Function `case_when()` is less efficient as it does the same thing but we will need to it one by one if this variable is repeated more than once in a datset. The `recode()` function changes that categorical variable name throught the whole dataset all at once. Below is an example of a plot from the "gapminder" dataset in which the variable names of the Caribbean countries could be recoded for shorter ones as they take a lot of space in the plot. 
 ```{r}
 library(dslabs)
 data("gapminder")
 gapminder %>% filter(region=="Caribbean") %>% ggplot(aes(year, life_expectancy, color=country)) + geom_line()
 ```
 
-- To see how many Variable have long names (>12 characters)
+- To see how many Variable have long names (>12 characters). The `distinct()` function displays only the distinct values of the variable entered, without it it would display around 180 values all for the same 4 countries. 
 ```{r}
 gapminder %>% filter(region=="Caribbean") %>% filter(str_length(country) >=12) %>% distinct(country)
 ```
@@ -804,5 +804,316 @@ gapminder %>% filter(region=="Caribbean") %>% mutate(country= recode(country,
                                                                      `St. Vincent and the Grenadines`= "St. Vince",
                                                                      `Trinidad and Tobago`= "Trinidad")) %>% 
   ggplot(aes(year, life_expectancy, color=country)) + geom_line(size=1)
+```
+
+**String Processing Exercise Parts 2 & 3**
+```{r}
+# Questions 2 & 3
+schedule<- tibble(day= c("Monday", "Tuesday"), staff=c("Mandy,Chris and laura", "Steve, Ruth and Frank"))
+schedule
+tidy<- schedule %>% mutate(staff= str_split(staff, ", | and ")) %>% unnest(cols = c(staff))
+tidy
+
+# Question 4
+gapminder %>% filter(region=="Middle Africa") %>% filter(str_length(country)>=12) %>% distinct(country)
+new<- gapminder %>% filter(region=="Middle Africa") %>% mutate(country_short= recode(country,
+                                                                                      `Central African Republic`= "CAR",
+                                                                                      `Congo, Dem. Rep.`= "DRC",
+                                                                                      `Equotorial Guinea`= "EQ"))
+new
+
+# Question 5
+library(rvest)
+library(tidyverse)
+library(stringr)
+url <- "https://en.wikipedia.org/w/index.php?title=Opinion_polling_for_the_United_Kingdom_European_Union_membership_referendum&oldid=896735054"
+tab <- read_html(url) %>% html_nodes("table")
+polls <- tab[[5]] %>% html_table(fill = TRUE)
+polls<- polls %>% setNames(c("dates", "remain", "leave", "undecided", "lead", "samplesize", "pollster", "poll_type", "notes"))
+pattern<- "^\\d{2,}\\.*\\d*%$"
+check<- str_detect(polls$remain, pattern)
+sum(check[-1])
+
+# Question 6
+check<- as.numeric(str_replace(polls$remain, "%", ""))/100    #OR parse_number(polls$remain)/100
+```
+
+**Dates & Times**
+
+- Working with dates from the "polls_us_election_2016". the dates in startdate look like strings but they are not, they are dates.
+```{r}
+library(dslabs)
+data("polls_us_election_2016")
+polls_us_election_2016$startdate %>% head
+class(polls_us_election_2016$startdate)
+# When we convert class dates into numbers, they convert into days since epoch date which is 1-January-1970.
+check<- as.numeric(polls_us_election_2016$startdate) %>% head
+check
+```
+
+- Tidyverse includes another package called "lubridate" that deals with dates. It can perform several useful operations on dates as bellow.
+```{r}
+# Sorting
+dates<- sample(polls_us_election_2016$startdate, 10) %>% sort
+dates
+```
+
+- Extracting Years, Months & Days
+```{r}
+data.frame(date= days(dates), month= month(dates), day= day(dates), year= year(dates))
+
+```
+
+-Extracting Month labels
+```{r}
+month(dates, label=TRUE)
+```
+
+- Parsers that converts "strings" into dates in the format given
+```{r}
+x <- c(20090101, "2009-01-02", "2009 01 03", "2009-1-4", "2009-1, 5", "Created on 2009 1 6", "200901 !!! 07")
+ymd(x)
+```
+
+- Different parsers extract the year, month & day in whatever order i need
+```{r}
+x <- "09/01/02"
+ymd(x)
+mdy(x)
+ydm(x)
+myd(x)
+dmy(x)
+dym(x)
+```
+
+- This package also deals with time, the below functions display times & the different time zones
+```{r}
+now()
+now("GMT")
+OlsonNames()                              # Displays ALL Time Zones
+
+now() %>% hour()
+now() %>% minute()
+now() %>% second()
+```
+
+- It can also parse strings into times & datetimes
+```{r}
+x<- c("12:34:56")
+hms(x)
+x<- "Nov/2/2012 12:34:56"
+mdy_hms(x)
+```
+
+**Trump Tweets**
+
+- The `tidytext` package helps us convert free form text into a tidy table. `unnest_tokens()` can be used to extract individual words and other meaningful chunks of text. Sentiment analysis assigns emotions or a positive/negative score to tokens. You can extract sentiments using `get_sentiments()`
+
+- During the 2016 US presidential election, then-candidate Donald J. Trump used his Twitter account as a way to communicate with potential voters. On August 6, 2016 Todd Vaziri tweeted about Trump that "Every non-hyperbolic tweet is from iPhone (his staff). Every hyperbolic tweet is from Android (from him)." Data scientist David Robinson conducted an analysis to determine if data supported this assertion. Here we go through David's analysis to learn some of the basics of text mining. In general, we can extract data directly from Twitter using the rtweet package. However, in this case, a group has already compiled data for us and made it available at <https://www.thetrumparchive.com>
+
+```{r eval=FALSE, include=FALSE}
+# This code needs to be fixed as the website containing the tweets has been modified
+library(jsonlite)
+url <- 'https://drive.google.com/file/d/16wm-2NTKohhcA26w-kaWfhLIGwl_oX95/view'
+trump_tweets<- map(2009:2017, ~sprintf(url, .x)) %>%
+  map_df(jsonlite::fromJSON, simplifyDataFrame = TRUE) %>%
+  filter(!is_retweet & !str_detect(text, '^"')) %>%
+  mutate(created_at = parse_date_time(created_at, orders = "a b! d! H!:M!:S! z!* Y!", tz="EST"))
+```
+
+- Using `?trump_tweets` we can see the actual tweets are stored under the column "text", and the device used to compose the tweet is stored under "source"
+```{r}
+library(dslabs)
+data("trump_tweets")
+head(trump_tweets)
+names(trump_tweets)                                 # Provides the names of the columns in the data frame
+trump_tweets %>% select(text) %>% head
+trump_tweets %>% count(source) %>% arrange(desc(n))
+```
+
+- Now we can use the `extract` function to remove the "Twitter for" part of the source
+```{r}
+trump_tweets %>% extract(source, "source", "Twitter for(.*)") %>% count(source)
+```
+
+- Now we need to focus on the tweets between the dates Trump announced his campaign & election day
+```{r}
+campaign_tweets <- trump_tweets %>% 
+  extract(source, "source", "Twitter for (.*)") %>%
+  filter(source %in% c("Android", "iPhone") &
+           created_at >= ymd("2015-06-17") & 
+           created_at < ymd("2016-11-08")) %>%
+  filter(!is_retweet) %>%
+  arrange(created_at)
+campaign_tweets
+```
+
+- We can now use data visualization to explore the possibility that two different groups were tweeting from these devices. For each tweet, we will extract the hour, in the east coast (EST), it was tweeted then compute the proportion of tweets tweeted at each hour for each device.
+```{r}
+library(scales)
+campaign_tweets %>%
+  mutate(hour = hour(with_tz(created_at, "EST"))) %>%
+  count(source, hour) %>%
+  group_by(source) %>%
+  mutate(percent = n / sum(n)) %>%
+  ungroup %>%
+  ggplot(aes(hour, percent, color = source)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = percent_format()) +
+  labs(x = "Hour of day (EST)",
+       y = "% of tweets",
+       color = "")
+```
+
+- Now we need to examine those tweets in further detail to see if there's a difference in the language or "tone" used in every device. The `tidytext` package helps us convert free from text into a tidy table. Having the data in this format greatly facilitates data visualization and applying statistical techniques. The main function needed to achieve this is unnest_tokens(). A token refers to the units that we are considering to be a data point. The most common tokens will be words, but they can also be single characters, ngrams, sentences, lines or a pattern defined by a regex. The functions will take a vector of strings and extract the tokens so that each one gets a row in the new table. Here is a simple example:
+```{r}
+library(tidytext)
+example <- data_frame(line = c(1, 2, 3, 4), text = c("Roses are red,", "Violets are blue,", "Sugar is sweet,", "And so are you."))
+example
+example %>% unnest_tokens(word, text)
+```
+
+- Now let's take tweet #3008 as an example of how to extract text from a tweet. If i want to apply my code to multiple tweets i can define a variable `i<- c(3008, 3009,4000, 2010, 2050)`
+```{r message=FALSE}
+campaign_tweets$text[3008]
+campaign_tweets[3008,] %>% unnest_tokens(word, text) %>% pull(word)               # If i enter[3008] only without "," i get an error
+# But the above code strips the important characters from the tweet like @ & #. To put those back we can add the below argument
+campaign_tweets[3008,] %>% unnest_tokens(word, text, token= "tweets") %>% pull(word)  
+```
+
+-  Removing the Links to pictures then adding the above step to check how both work on a sample tweet (3008) before applying to everything
+```{r message=FALSE}
+links <- "https://t.co/[A-Za-z\\d]+|&amp;"
+campaign_tweets[3008,] %>% mutate(text= str_replace_all(text, links, "")) %>% unnest_tokens(word, text, token = "tweets") %>% pull(word)
+```
+
+- Now applying those rules to ALL tweets
+```{r message=FALSE}
+tweet_words<- campaign_tweets %>% mutate(text= str_replace_all(text, links, "")) %>% unnest_tokens(word, text, token = "tweets")
+```
+
+- Now we can apply statistics to tweets like answering questions like "what are the most commonly used words". But we immediately realize that the most common words are the "stop words" like, (the, to, is, and,...) so, we need to filter those out to have meaningful stats
+```{r message=FALSE}
+tweet_words %>% count(word) %>% arrange(desc(n))
+# Removing "Stop Words"
+tweet_words<- campaign_tweets %>% mutate(text= str_replace_all(text, links, "")) %>% unnest_tokens(word, text, token = "tweets") %>% filter(!word %in% stop_words$word)
+tweet_words %>% count(word) %>% mutate(word= reorder(word, n)) %>% arrange(desc(n))
+```
+
+- Some of the words above are actually numbers & some are quotes starting with ', we can remove those as well. The pattern for removing the numbers would be `"^\\d+$`
+```{r message=FALSE, warning=FALSE}
+tweet_words<- campaign_tweets %>% mutate(text= str_replace_all(text, links, "")) %>% unnest_tokens(word, text, token = "tweets") %>% filter(!word %in% stop_words$word & !str_detect(word, "^\\d+$")) %>% mutate(word= str_replace(word, "^'", ""))
+```
+
+- Now let's explore the main idea of the case study in which we need to examine the possibility of identifying the difference in the language or "tone" of tweets sent from iPhone vs. Android. NOTE: a "0.5" correction is added to proportions as a lot are going to be only 0
+```{r}
+# To count the words from each source
+android_iphone<- tweet_words %>% count(word, source)
+
+# To create a separate column for each device & fill the rows without data with "0" instead of "NA"
+android_iphone<- tweet_words %>% count(word, source) %>% spread(source, n, fill = 0)
+
+# To create a new column "or" with the ratio described to get the proportion of words
+android_iphone<- tweet_words %>% count(word, source) %>% spread(source, n, fill = 0) %>% mutate(or= (Android+0.5) / (sum(Android)- Android+0.5) / ((iPhone+0.5) / (sum(iPhone) -iPhone+0.5)))
+```
+
+- Now we can display & arrange highest proportion of words used for every device
+```{r}
+# To display highest ratios for Android
+android_iphone %>% arrange(desc(or)) %>% head(n=20)
+
+# To display highest ratios for iPhone
+android_iphone %>% arrange(or) %>% head(n=20)
+
+# To display the words with the highest frequency only (words appearing more than 100 times). For Android
+android_iphone %>% filter(Android+iPhone > 100) %>% arrange(desc(or))
+
+# To display the words with the highest frequency only (words appearing more than 100 times). For iPhone
+android_iphone %>% filter(Android+iPhone > 100) %>% arrange(or)
+```
+
+**Sentiment Analysis** provides a way to provide insight of sentiment. `tidytext` package include lexicons or maps that assign a sentiment to each word. The "bing" lexicon divides words into positive & negative sentiments. The "afinn" lexicon assigns a core between -5 (most negative) to 5 (most positive). The "loughran" & "nrc" lexicons provide further sentiments
+```{r}
+library(tidytext)
+library(textdata)
+get_sentiments("bing")                                              # To explore the bing lexicon
+get_sentiments("afinn")                                             # To explore the afinn lexicon
+get_sentiments("loughran")
+get_sentiments("loughran") %>% count(sentiment)                     # To count the words in each sentiment                  
+get_sentiments("nrc")
+```
+
+- Now we can use the "nrc" lexicon to evaluate sentiments of tweets from different devices. We will use `inner_join()` function to only keep the words associated with sentiments.
+```{r}
+nrc<- get_sentiments("nrc") %>% select(word, sentiment)             # Define the lexicon i want to use for evaluation
+tweet_words %>% inner_join(nrc, by="word") %>% select(source, word, sentiment) %>% sample_n(10)
+```
+
+- Now we can do some analysis to explore the frequencies of each sentiment for each device.
+```{r}
+# Combine the nrc sentiment list to our dataset
+sentiment_counts<- tweet_words %>% left_join(nrc, by="word")
+sentiment_counts
+# Counts every sentiment detected
+sentiment_counts<- tweet_words %>% left_join(nrc, by="word") %>% count(source, sentiment)
+sentiment_counts
+# Creates a separate column for every device
+sentiment_counts<- tweet_words %>% left_join(nrc, by="word") %>% count(source, sentiment) %>% spread(source, n)
+sentiment_counts
+# Replaces the "NA" sentiments with "None"
+sentiment_counts<- tweet_words %>% left_join(nrc, by="word") %>% count(source, sentiment) %>% spread(source, n) %>% mutate(sentiment= replace_na(sentiment, replace="None"))
+sentiment_counts
+```
+
+- Now we can further compute the odds of being in the device: proportion of words with sentiment versus proportion of words without, and then compute the odds ratio comparing the two devices (whatever that is !)
+```{r}
+sentiment_counts %>% mutate(Android_Prop = Android / (sum(Android) - Android) ,  iPhone_Prop = iPhone / (sum(iPhone) - iPhone), Proportion = Android_Prop/iPhone_Prop) %>% arrange(desc(Proportion))
+```
+
+- So we do see some differences and the order is interesting: the largest three sentiments are disgust, anger, and negative! But are these differences just due to chance? How does this compare if we are just assigning sentiments at random? To answer this question we can compute, for each sentiment, an odds ratio and a confidence interval, as defined in Section 15.10. We will add the two values we need to form a two-by-two table and the odds ratio:
+```{r}
+library(broom)
+log_or <- sentiment_counts %>%
+  mutate(log_or = log((Android / (sum(Android) - Android)) / 
+      (iPhone / (sum(iPhone) - iPhone))),
+          se = sqrt(1/Android + 1/(sum(Android) - Android) + 
+                      1/iPhone + 1/(sum(iPhone) - iPhone)),
+          conf.low = log_or - qnorm(0.975)*se,
+          conf.high = log_or + qnorm(0.975)*se) %>%
+  arrange(desc(log_or))
+log_or
+          
+```
+
+- A graphical visualization shows some sentiments that are clearly overrepresented:
+```{r}
+log_or %>%
+  mutate(sentiment = reorder(sentiment, log_or)) %>%
+  ggplot(aes(x = sentiment, ymin = conf.low, ymax = conf.high)) +
+  geom_errorbar() +
+  geom_point(aes(sentiment, log_or)) +
+  ylab("Log odds ratio for association between Android and sentiment") +
+  coord_flip() 
+```
+
+- We see that the disgust, anger, negative, sadness, and fear sentiments are associated with the Android in a way that is hard to explain by chance alone. Words not associated to a sentiment were strongly associated with the iPhone source, which is in agreement with the original claim about hyperbolic tweets.If we are interested in exploring which specific words are driving these differences, we can refer back to our `android_iphone` object:
+```{r}
+android_iphone %>% inner_join(nrc) %>%
+  filter(sentiment == "disgust" & Android + iPhone > 10) %>%
+  arrange(desc(or))
+```
+
+- Graph
+```{r}
+android_iphone %>% inner_join(nrc, by = "word") %>%
+  mutate(sentiment = factor(sentiment, levels = log_or$sentiment)) %>%
+  mutate(log_or = log(or)) %>%
+  filter(Android + iPhone > 10 & abs(log_or)>1) %>%
+  mutate(word = reorder(word, log_or)) %>%
+  ggplot(aes(word, log_or, fill = log_or < 0)) +
+  facet_wrap(~sentiment, scales = "free_x", nrow = 2) + 
+  geom_bar(stat="identity", show.legend = FALSE) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
