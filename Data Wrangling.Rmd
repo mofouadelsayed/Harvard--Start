@@ -363,7 +363,7 @@ not_inches<- function(x, smallest=50, tallest=84){
 # Now we can apply the above function to quickly check how many entries have problems. The below line of code can also be replaced by the following which will give the same result `problems<- reported_heights %>% filter(not_inches(height)) %>% .$height
 problems<- reported_heights %>% filter(not_inches(height)) %>% pull(height)
 length(problems)
-problems
+problems %>% as_tibble()
 ```
 
 - If we examine "problems" closely, we will see common patterns that we can isolate & fix. Below are a couple of examples then we will study in detail.
@@ -820,7 +820,7 @@ new<- gapminder %>% filter(region=="Middle Africa") %>% mutate(country_short= re
                                                                                       `Central African Republic`= "CAR",
                                                                                       `Congo, Dem. Rep.`= "DRC",
                                                                                       `Equotorial Guinea`= "EQ"))
-new
+new %>% head(n=10)
 
 # Question 5
 library(rvest)
@@ -860,8 +860,8 @@ dates
 
 - Extracting Years, Months & Days
 ```{r}
-data.frame(date= days(dates), month= month(dates), day= day(dates), year= year(dates))
-
+library(lubridate)
+data.frame(date= dates, month= month(dates), day= day(dates), year= year(dates))
 ```
 
 -Extracting Month labels
@@ -890,7 +890,7 @@ dym(x)
 ```{r}
 now()
 now("GMT")
-OlsonNames()                              # Displays ALL Time Zones
+OlsonNames() %>% head(n=10)                              # Displays ALL Time Zones
 
 now() %>% hour()
 now() %>% minute()
@@ -945,7 +945,7 @@ campaign_tweets <- trump_tweets %>%
            created_at < ymd("2016-11-08")) %>%
   filter(!is_retweet) %>%
   arrange(created_at)
-campaign_tweets
+campaign_tweets %>% head(n=10)
 ```
 
 - We can now use data visualization to explore the possibility that two different groups were tweeting from these devices. For each tweet, we will extract the hour, in the east coast (EST), it was tweeted then compute the proportion of tweets tweeted at each hour for each device.
@@ -995,10 +995,10 @@ tweet_words<- campaign_tweets %>% mutate(text= str_replace_all(text, links, ""))
 
 - Now we can apply statistics to tweets like answering questions like "what are the most commonly used words". But we immediately realize that the most common words are the "stop words" like, (the, to, is, and,...) so, we need to filter those out to have meaningful stats
 ```{r message=FALSE}
-tweet_words %>% count(word) %>% arrange(desc(n))
+tweet_words %>% count(word) %>% arrange(desc(n)) %>% head(n=20)
 # Removing "Stop Words"
 tweet_words<- campaign_tweets %>% mutate(text= str_replace_all(text, links, "")) %>% unnest_tokens(word, text, token = "tweets") %>% filter(!word %in% stop_words$word)
-tweet_words %>% count(word) %>% mutate(word= reorder(word, n)) %>% arrange(desc(n))
+tweet_words %>% count(word) %>% mutate(word= reorder(word, n)) %>% arrange(desc(n)) %>% head(n=10)
 ```
 
 - Some of the words above are actually numbers & some are quotes starting with ', we can remove those as well. The pattern for removing the numbers would be `"^\\d+$`
@@ -1027,10 +1027,10 @@ android_iphone %>% arrange(desc(or)) %>% head(n=20)
 android_iphone %>% arrange(or) %>% head(n=20)
 
 # To display the words with the highest frequency only (words appearing more than 100 times). For Android
-android_iphone %>% filter(Android+iPhone > 100) %>% arrange(desc(or))
+android_iphone %>% filter(Android+iPhone > 100) %>% arrange(desc(or)) %>% head(n=10)
 
 # To display the words with the highest frequency only (words appearing more than 100 times). For iPhone
-android_iphone %>% filter(Android+iPhone > 100) %>% arrange(or)
+android_iphone %>% filter(Android+iPhone > 100) %>% arrange(or) %>% head(n=10)
 ```
 
 **Sentiment Analysis** provides a way to provide insight of sentiment. `tidytext` package include lexicons or maps that assign a sentiment to each word. The "bing" lexicon divides words into positive & negative sentiments. The "afinn" lexicon assigns a core between -5 (most negative) to 5 (most positive). The "loughran" & "nrc" lexicons provide further sentiments
@@ -1053,7 +1053,7 @@ tweet_words %>% inner_join(nrc, by="word") %>% select(source, word, sentiment) %
 - Now we can do some analysis to explore the frequencies of each sentiment for each device.
 ```{r}
 # Combine the nrc sentiment list to our dataset
-sentiment_counts<- tweet_words %>% left_join(nrc, by="word")
+sentiment_counts<- tweet_words %>% left_join(nrc, by="word") %>% head(n=10)
 sentiment_counts
 # Counts every sentiment detected
 sentiment_counts<- tweet_words %>% left_join(nrc, by="word") %>% count(source, sentiment)
@@ -1083,7 +1083,6 @@ log_or <- sentiment_counts %>%
           conf.high = log_or + qnorm(0.975)*se) %>%
   arrange(desc(log_or))
 log_or
-          
 ```
 
 - A graphical visualization shows some sentiments that are clearly overrepresented:
@@ -1115,5 +1114,43 @@ android_iphone %>% inner_join(nrc, by = "word") %>%
   facet_wrap(~sentiment, scales = "free_x", nrow = 2) + 
   geom_bar(stat="identity", show.legend = FALSE) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+**Dates, Times & Text Mining Assessment**
+```{r}
+# Question 3
+check<- brexit_polls %>%  filter(startdate >= ymd("2016-04-01") & startdate<= ymd("2016-04-30")) 
+#OR
+check<- brexit_polls %>%  mutate(Month= month(startdate,label = TRUE)) %>% filter(Month=="Apr") 
+check
+# Website Answer
+sum(month(brexit_polls$startdate) == 4)
+# Second Part
+check2<- brexit_polls %>% mutate(enddate= round_date(enddate, "week")) %>% filter(enddate== "2016-06-12")
+check2
+#Website Answer
+sum(round_date(brexit_polls$enddate, unit = "week") == "2016-06-12")
+
+# Question 4
+check3<- brexit_polls %>% mutate(day= weekdays(enddate)) %>% count(day)
+#Website Answer
+table(weekdays(brexit_polls$enddate))
+
+# Question 5
+check4<- movielens %>% mutate(timestamp= as_datetime(movielens$timestamp), timestamp= round_date(timestamp, "year")) %>% count(timestamp)
+check4
+# Website Answer
+dates <- as_datetime(movielens$timestamp)
+reviews_by_year <- table(year(dates))     # Count reviews by year
+names(which.max(reviews_by_year))         # Name of year with most reviews
+
+# Second Part
+check4<- movielens %>% mutate(timestamp= as_datetime(movielens$timestamp), Year= year(timestamp), Hour= hour(timestamp)) %>% count(Year) %>% arrange(desc(n))
+check4
+check4<- movielens %>% mutate(timestamp= as_datetime(movielens$timestamp), Year= year(timestamp), Hour= hour(timestamp)) %>% count(Hour) %>% arrange(desc(n))
+check4
+# Website Answer
+reviews_by_hour <- table(hour(dates))    # Count reviews by hour
+names(which.max(reviews_by_hour))        # Name of hour with most reviews
 ```
 
