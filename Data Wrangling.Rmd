@@ -966,7 +966,7 @@ campaign_tweets %>%
        color = "")
 ```
 
-- Now we need to examine those tweets in further detail to see if there's a difference in the language or "tone" used in every device. The `tidytext` package helps us convert free from text into a tidy table. Having the data in this format greatly facilitates data visualization and applying statistical techniques. The main function needed to achieve this is unnest_tokens(). A token refers to the units that we are considering to be a data point. The most common tokens will be words, but they can also be single characters, ngrams, sentences, lines or a pattern defined by a regex. The functions will take a vector of strings and extract the tokens so that each one gets a row in the new table. Here is a simple example:
+- Now we need to examine those tweets in further detail to see if there's a difference in the language or "tone" used in every device. The `tidytext` package helps us convert free from text into a tidy table. Having the data in this format greatly facilitates data visualization and applying statistical techniques. The main function needed to achieve this is `unnest_tokens()`. A token refers to the units that we are considering to be a data point. The most common tokens will be words, but they can also be single characters, ngrams, sentences, lines or a pattern defined by a regex. The functions will take a vector of strings and extract the tokens so that each one gets a row in the new table. Here is a simple example:
 ```{r}
 library(tidytext)
 example <- data_frame(line = c(1, 2, 3, 4), text = c("Roses are red,", "Violets are blue,", "Sugar is sweet,", "And so are you."))
@@ -1117,6 +1117,7 @@ android_iphone %>% inner_join(nrc, by = "word") %>%
 ```
 
 **Dates, Times & Text Mining Assessment**
+- Questions Part 1
 ```{r}
 # Question 3
 check<- brexit_polls %>%  filter(startdate >= ymd("2016-04-01") & startdate<= ymd("2016-04-30")) 
@@ -1152,5 +1153,38 @@ check4
 # Website Answer
 reviews_by_hour <- table(hour(dates))    # Count reviews by hour
 names(which.max(reviews_by_hour))        # Name of hour with most reviews
+```
+
+- Questions Part 2
+```{r}
+# Question 6
+check<- filter(gutenberg_metadata, str_detect(gutenberg_metadata$title, "Pride and Prejudice"))
+check
+
+# Question 7
+gutenberg_works(title== "Pride and Prejudice")
+
+# Question 8
+words<- gutenberg_download(gutenberg_id = 1342)
+words<- words %>% unnest_tokens(words, text)
+
+# Question 9
+words<- words %>% filter(!words %in% stop_words$word)
+words %>% head(n=20)
+
+# Question 10
+words<- words %>% filter(!words %in% stop_words$word & !str_detect(words, "(^\\d+)|(\\d+th)$"))
+
+# Question 11
+check1<- words %>% count(words)
+check1<- filter(check1, n>100) %>% arrange(desc(n))
+
+# Question 12
+# Had to rename the column "words" to "word" so it matches the column in "affin_sentiments" to permit inner_join
+words<- words %>% setNames(c("gutenberg_id","word"))               
+afinn_sentiments<- words %>% inner_join(afinn, by="word")
+positive<- afinn_sentiments %>% filter(value> 0) %>% count()       
+# Divide the outcome by the total in afinn_sentiments to get proportion 
+score4<- afinn_sentiments %>% filter(value=="4") %>% count()
 ```
 
