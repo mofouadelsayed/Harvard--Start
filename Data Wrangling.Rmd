@@ -775,7 +775,8 @@ the_names
 the_names<- the_names %>% str_to_lower() %>% str_replace_all("\\s", "_")
 the_names
 ```
-- Now working on the data in the table itself. when trying to examine the data in "table" & compare it to the PDF, it's found that the data populating the table will be probably in rows 6 to 14. In the first line of code we can trim all spaces & split data whenever there are spaces. Then the second line of code creates a data frame then adds the headers then changes the data populating the table to numbers except for the first column.
+
+- Now working on the data in the table itself. When trying to examine the data in "table" & compare it to the PDF, it's found that the data populating the table will be probably in rows 6 to 14. In the first line of code we can trim all spaces & split data whenever there are spaces. Then the second line of code creates a data frame then adds the headers then changes the data populating the table to numbers except for the first column.
 ```{r}
 new_raw_data_research<- table[6:14] %>% str_trim() %>% str_split("\\s{2,}", simplify = TRUE)
 new_raw_data_research
@@ -1213,29 +1214,4 @@ mean(afinn_sentiments$value > 0)
 sum(afinn_sentiments$value == 4)
 ```
 
-**Puerto Rico Hurricane Mortality Assessment**
-```{r}
-list.files(system.file("extdata",package = "dslabs"))                                          # List files in dslabs package
-fn<- system.file("extdata", "RD-Mortality-Report_2015-18-180531.pdf" , package = "dslabs")     # Define the file i will work on
-system2("open", args= fn)                                                                      # Open the file
-
-# In order to start working on that file, i need to copy it to my working drive first then start reading it with the tools
-file.copy(fn, getwd())
-txt<- pdf_text("RD-Mortality-Report_2015-18-180531.pdf")
-library(stringr)
-raw<- txt[9]
-x<- str_split(raw, "\n")
-s<- x[[1]]
-s<- str_trim(s)
-s[1]
-header_index<- s[2]
-header_index
-s %>% str_which("2015")
-month<- str_extract(header_index, "SEP")
-month
-header<- str_split(header_index, "\\s+", simplify = TRUE)
-header<- header[-1]
-header
-header[3]
-```
 
