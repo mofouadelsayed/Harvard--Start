@@ -704,7 +704,7 @@ col_names<- x[[1]]
 x<- x[-1]                                             # This defines the data imported without the header
 ```
 
-- In order ti extract the column number in the second argument of the function `map()`. But to force `map()` to return characters i can used `map_chr()` instead & use `map_int()` if i want integers.
+- In order ti extract the column number in the second argument of the function `map()`. But to force `map()` to return characters i can use `map_chr()` instead & use `map_int()` if i want integers.
 ```{r}
 map(x,1) %>% head
 
@@ -1259,9 +1259,18 @@ s <- str_remove_all(s, "[^\\d\\s]")
 s <- str_split_fixed(s, "\\s+", n = 6)[,1:5]
 s
 
-check<- s
-colnames(check)<- c("Day", header)
-check<- as_data_frame(check)
+tab<- s
+colnames(tab)<- c("Day", header)
+tab<- tab %>% as_data_frame() %>% mutate_all(parse_number)
+tab
+mean(tab$`2015`)
+mean(tab$`2016`)
+mean(tab$`2017`[1:19])
+mean(tab$`2017`[20:30])
+
+tab<- tab %>% gather(year, deaths, -Day) %>% mutate(deaths= as.numeric(deaths))
+library(ggplot2)
+tab %>% ggplot(aes(Day, deaths, color= year)) + geom_line(size=1) + geom_vline(xintercept = 19, color= "red")
 ```
 
 
