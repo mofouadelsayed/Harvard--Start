@@ -1273,5 +1273,35 @@ library(ggplot2)
 tab %>% ggplot(aes(Day, deaths, color= year)) + geom_line(size=1) + geom_vline(xintercept = 19, color= "red")
 ```
 
+**Exploring On My Own**
+- I'll try to import data from my weekly GR Iventory report to Rstudio & Analyze
+```{r}
+# To list the files in a specific location. NOTICE the "\", if i used the oppsite one it won't work
+list.files("C:/Users/Mohamed.Elsayad/Desktop")
+
+# Then to copy the desired file into my WD
+file_path<- ("C:/Users/Mohamed.Elsayad/Desktop/GR Weekly Inventory 12-Apr-21.pdf")
+file.copy(file_path, getwd())
+raw_inventory<- pdf_text("GR Weekly Inventory 12-Apr-21.pdf")
+raw_inventory<- str_split(raw_inventory, "\n")
+report_date<- raw_inventory[[1]]
+report_date<- report_date[1]
+report_date<- str_extract(report_date, "[A-Za-z]{3,8}\\s+\\d+,\\s+\\d+")
+report_title<- raw_inventory[[1]]
+report_title<- report_title[2]
+report_title<- str_trim(report_title)
+header_1<- raw_inventory[[1]]
+header_1<- header_1[4]
+header_1<- str_extract(header_1, c("Product Information", "In Process Inventory"))
+header_2<- raw_inventory[[1]]
+header_2<- header_2[5]
+header_2<- str_extract(header_2, c("Prime", "Fin", "Held", "Met"))
+header_3<- raw_inventory[[1]]
+header_3<- header_3[6]
+header_3<- str_split(header_3, "\\s{2,}+")
+body_1<- raw_inventory[[1]]
+body_1<- body_1[7:33]
+check<- str_split_fixed(body_1, "\\s+", n=13) # Need to figue out how to keep the long sizes as 1 column
+```
 
  
