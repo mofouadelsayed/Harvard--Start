@@ -1301,7 +1301,8 @@ header_3<- header_3[6]
 header_3<- str_split(header_3, "\\s{2,}+")
 body_1<- raw_inventory[[1]]
 body_1<- body_1[7:33]
-check<- str_split_fixed(body_1, "\\s+", n=13) # Need to figue out how to keep the long sizes as 1 column
+check<- str_split_fixed(body_1, "\\s{2,}+", n=13) # Need to figue out how to keep the long sizes as 1 column
+
 ```
 
  
