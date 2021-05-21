@@ -19,7 +19,7 @@ path
 list.files(path)
 ```
 
-- Now lets say i want to copy one of the above files to my working directory. I will define the file name i want to copy, then i will define the full path it's located in then i'll copy all that into my working directory. Then i can double check if the file was actually copied
+- Now lets say i want to copy one of the above files to my working directory. I will define the file name i want to copy, then i will define the full path it's located in then I'll copy all that into my working directory. Then i can double check if the file was actually copied
 ```{r}
 filename<- "murders.csv"
 fullpath<- file.path(path, filename)
@@ -34,7 +34,7 @@ file.exists(filename)
 3. `read_xlsx`: reads files with "xlsx" format
 *NOTE:* The sheet function in the above functions specify the sheet to read.
 
-- I can use `read_lines("murders.csv", n_max=3) to read the first 3 lines in that file to know to double check if it has a header & if it's comma or semicolon separated.
+- I can use `read_lines("murders.csv", n_max=3)` to read the first 3 lines in that file to know to double check if it has a header & if it's comma or semicolon separated.
 
 - Since i'm trying to import or read a "csv" file, i should use the function as below then i can normally use the `head()` function to check the first 6 lines
 ```{r}
@@ -281,7 +281,7 @@ cat(s)
 
 ```
 
-- Now returning to work on the "muders_raw" dataset, `stringr` package includes the functions needed to work on tydying the data in that table for example to remove the commas included in numbers. Functions of this package always start with "str_" so i can type the str_ part then hit "tab" & R will show all available functions of that package.
+- Now returning to work on the "muders_raw" dataset, `stringr` package includes the functions needed to work on tidying the data in that table for example to remove the commas included in numbers. Functions of this package always start with "str_" so i can type the str_ part then hit "tab" & R will show all available functions of that package.
 **NOTE:** Refer to page 444 of the text book for a table of str_ functions & their description.
 ```{r}
 # The code below is supposed to show Identify which columns include numbers with ","
@@ -429,15 +429,15 @@ pattern<- "^\\d$"
 yes<- c("1", "5", "9")
 no<- c("12", "123", " 1", "a4", "b")
 b<- c(yes, no)
-str_view(b, pattern)
+str_detect(b, pattern)
 ```
 
-- In order to specify how many times a specific digit can occur we would need to enter how many digits we expect our number to be within curly brakets{}. For Example, we know that inches in the heights column could only be wither 1 or 2 digits.. nothing more. In that case the pattern we would be looking for would be `^\\d{1,2}$`.
+- In order to specify how many times a specific digit can occur we would need to enter how many digits we expect our number to be within curly brackets{}. For Example, we know that inches in the heights column could only be whether 1 or 2 digits.. nothing more. In that case the pattern we would be looking for would be `^\\d{1,2}$`.
 ```{r}
 pattern<- "^\\d{1,2}$"
 yes<- c("1", "5", "9", "12")
 no<- c("123", "a4", "b")
-str_view(c(yes, no), pattern)
+str_detect(c(yes, no), pattern)
 ```
 
 - Now in order to look for the common input pattern of x'y", we can use the following pattern `"^[4-7]'\\d{1,2}\"$"`. This tells us that we are looking for a pattern of digit 4-7 followed by ' followed by 1 or 2 digits followed by ".
@@ -460,12 +460,12 @@ sum(str_detect(problems, pattern))
 str_subset(problems, "inches")
 ```
 
-- Checking for entries using siglw quotes 2 times to denot inches
+- Checking for entries using single quotes 2 times to denote inches
 ```{r}
 str_subset(problems, "''") %>% cat
 ```
 
-- In order to solve that we can replace all that with a standard pattern `x'y` where feet is denoted by ' & inches is not denoted by anything. Therefore; we can update the pattern to be `pattern<- "^[4-7]'\\d{1,2}$"`. If we clean up the data to replace all unwated symbols to fit our pattern, we will get more matches to our pattern.
+- In order to solve that we can replace all that with a standard pattern `x'y` where feet is denoted by ' & inches is not denoted by anything. Therefore; we can update the pattern to be `pattern<- "^[4-7]'\\d{1,2}$"`. If we clean up the data to replace all unwanted symbols to fit our pattern, we will get more matches to our pattern.
 ```{r}
 pattern<- "^[4-7]'\\d{1,2}$"
 problems %>% str_replace("feet|ft|foot", "'") %>% str_replace("inches|in|''|\"", "") %>% str_detect(pattern) %>% sum
@@ -699,12 +699,12 @@ lines %>% head()
 x<- str_split(lines, ",")
 head(x)
 
-# To sepearate the column names only (headers)
+# To separate the column names only (headers)
 col_names<- x[[1]]
 x<- x[-1]                                             # This defines the data imported without the header
 ```
 
-- In order ti extract the column number in the second argument of the function `map()`. But to force `map()` to return characters i can use `map_chr()` instead & use `map_int()` if i want integers.
+- In order to extract the column number in the second argument of the function `map()`. But to force `map()` to return characters i can use `map_chr()` instead & use `map_int()` if i want integers.
 ```{r}
 map(x,1) %>% head
 
@@ -718,7 +718,7 @@ dat<- tibble(map_chr(x,1),
 dat %>% head
 ```
 
-- ALL the above steps could be replaced by the following which resturns a matrix istead of a list
+- ALL the above steps could be replaced by the following which returns a matrix instead of a list
 ```{r}
 x<- str_split(lines, ",", simplify = TRUE)
 col_names<- x[1,]
@@ -755,7 +755,7 @@ the_names_2
 ```{r}
 the_names_1<- the_names_1 %>% str_trim()                               #1. Removes ALL spaces before Entries
 the_names_1
-the_names_1<- the_names_1 %>% str_replace_all(",\\s.", "")             # str_replace only replaces the fisrt column
+the_names_1<- the_names_1 %>% str_replace_all(",\\s.", "")             # str_replace only replaces the first column
 the_names_1
 the_names_1<- the_names_1 %>% str_split("\\s{2,}", simplify = TRUE)    # \\s{2,} represents 2 OR More spaces
 the_names_1
@@ -767,7 +767,7 @@ the_names_2<- the_names_2 %>% str_trim() %>% str_split("\\s+", simplify = TRUE)
 the_names_2
 ```
 
-- Now I need to combine those two headers to match the data in the PDF. The `str_c()` joins two or more vectors into a single character vector. `rep(the_names_1, each=3)` creates 3 duplicates from the header `the_names_1`. The First line of code therefore; duplicates the first header 3 times then it combines it woth the second header excluding the "Discipline" column. The Second line of code then adds the first column back into the table. The Third line of code then changes all to lower case then replaces the space with another"_"
+- Now I need to combine those two headers to match the data in the PDF. The `str_c()` joins two or more vectors into a single character vector. `rep(the_names_1, each=3)` creates 3 duplicates from the header `the_names_1`. The First line of code therefore; duplicates the first header 3 times then it combines it with the second header excluding the "Discipline" column. The Second line of code then adds the first column back into the table. The Third line of code then changes all to lower case then replaces the space with another"_"
 ```{r}
 the_names<- str_c(rep(the_names_1, each=3), the_names_2[-1], sep = "_")
 the_names<- c(the_names_2[1], the_names)
@@ -785,14 +785,14 @@ new_raw_data_research
 new_raw_data_research %>% as_tibble()       # The only difference i observed was it looks better in console !
 ```
 
-- Another useful function to use in general would be the `recode()` function in the tidyverse package. Function `case_when()` is less efficient as it does the same thing but we will need to it one by one if this variable is repeated more than once in a datset. The `recode()` function changes that categorical variable name throught the whole dataset all at once. Below is an example of a plot from the "gapminder" dataset in which the variable names of the Caribbean countries could be recoded for shorter ones as they take a lot of space in the plot. 
+- Another useful function to use in general would be the `recode()` function in the tidyverse package. Function `case_when()` is less efficient as it does the same thing but we will need to do it one by one if this variable is repeated more than once in a datset. The `recode()` function changes that categorical variable name througout the whole dataset all at once. Below is an example of a plot from the "gapminder" dataset in which the variable names of the Caribbean countries could be recoded for shorter ones as they take a lot of space in the plot. 
 ```{r}
 library(dslabs)
 data("gapminder")
 gapminder %>% filter(region=="Caribbean") %>% ggplot(aes(year, life_expectancy, color=country)) + geom_line()
 ```
 
-- To see how many Variable have long names (>12 characters). The `distinct()` function displays only the distinct values of the variable entered, without it it would display around 180 values all for the same 4 countries. 
+- To see how many Variables have long names (>12 characters). The `distinct()` function displays only the distinct values of the variable entered, without it it would display around 180 values all for the same 4 countries. 
 ```{r}
 gapminder %>% filter(region=="Caribbean") %>% filter(str_length(country) >=12) %>% distinct(country)
 ```
@@ -1274,14 +1274,16 @@ tab %>% ggplot(aes(Day, deaths, color= year)) + geom_line(size=1) + geom_vline(x
 ```
 
 **Exploring On My Own**
-- I'll try to import data from my weekly GR Iventory report to Rstudio & Analyze
+- I'll try to import data from my weekly GR Inventory report to Rstudio & Analyze
 ```{r}
-# To list the files in a specific location. NOTICE the "\", if i used the oppsite one it won't work
+# To list the files in a specific location. NOTICE the "\", if i used the opposite one it won't work
 list.files("C:/Users/Mohamed.Elsayad/Desktop")
 
 # Then to copy the desired file into my WD
 file_path<- ("C:/Users/Mohamed.Elsayad/Desktop/GR Weekly Inventory 12-Apr-21.pdf")
 file.copy(file_path, getwd())
+library(pdftools)
+library(stringr)
 raw_inventory<- pdf_text("GR Weekly Inventory 12-Apr-21.pdf")
 raw_inventory<- str_split(raw_inventory, "\n")
 report_date<- raw_inventory[[1]]
@@ -1299,9 +1301,24 @@ header_2<- str_extract(header_2, c("Prime", "Fin", "Held", "Met"))
 header_3<- raw_inventory[[1]]
 header_3<- header_3[6]
 header_3<- str_split(header_3, "\\s{2,}+")
+Header<- c("Size","Length", "Grade", "Total", "Prime Treated", "Prime Untreated", "Fin Treated", "Fin Untreated", "Held Total", "Held Untreated", "Held Treated", "Met Released", "Met Unreleased")
 body_1<- raw_inventory[[1]]
 body_1<- body_1[7:33]
-check<- str_split_fixed(body_1, "\\s+", n=13) # Need to figue out how to keep the long sizes as 1 column
+body_1<- body_1 %>% str_replace_all("(\\d+')\\s*(\\d+)\\s*(\\d/\\d)", "\\1\\2\"\\3")
+body_1<- str_split_fixed(body_1, "\\s{2,}+", n=13)
+colnames(body_1)<- c("Size","Length", "Grade", "Total", "Prime Treated", "Prime Untreated", "Fin Treated", "Fin Untreated", "Held Total", "Held Untreated", "Held Treated", "Met Released", "Met Unreleased")
+body_1<- as.data.frame(body_1)
+body_2<- raw_inventory[[2]]
+body_2<- body_2[7:14]
+body_2<- body_2 %>% str_replace_all("(\\d+')\\s*(\\d+)\\s*(\\d/\\d)", "\\1\\2\"\\3")
+body_2<- str_split_fixed(body_2, "\\s+", n=13)
+colnames(body_2)<- Header
+body_2<- as.data.frame(body_2)
+body<- bind_rows(body_1, body_2)
+body<- mutate_all(body, parse_guess)
+body<- mutate(body, Date=report_date)
+body %>% ggplot(aes(Length, `Held Total`, col= Grade)) + geom_bar(stat = "identity") +  theme(axis.text.x = element_text(angle=90, hjust=1))
+body %>% filter(Length=="19'04\"") %>% ggplot(aes(Grade, `Held Total`, col= Grade)) + geom_bar(stat = "identity") +  theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
  
