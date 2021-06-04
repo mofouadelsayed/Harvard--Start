@@ -14,13 +14,13 @@ library(stringr)
 list.files("C:/Users/Mohamed.Elsayad/Desktop/General Reports & Documents/Weekly Inventory Reports")
 
 # Then to copy the desired file into my WD
-file_path<- ("C:/Users/Mohamed.Elsayad/Desktop/General Reports & Documents/Weekly Inventory Reports/GR Weekly Inventory 19-Apr-21.pdf")
+file_path<- ("C:/Users/Mohamed.Elsayad/Desktop/General Reports & Documents/Weekly Inventory Reports/GR Weekly Inventory 29-Dec-20.pdf")
 file.copy(file_path, getwd())
-raw_inventory<- pdf_text("GR Weekly Inventory 12-Apr-21.pdf")
+raw_inventory<- pdf_text("GR Weekly Inventory 29-Dec-20.pdf")
 raw_inventory<- str_split(raw_inventory, "\n")
 report_date<- raw_inventory[[1]]
 report_date<- report_date[1]
-report_date<- str_extract(report_date, "[A-Za-z]{3,8}\\s+\\d+,\\s+\\d+")
+report_date<- str_extract(report_date, "[A-Za-z]{3,9}\\s+\\d+,\\s+\\d+")
 report_title<- raw_inventory[[1]]
 report_title<- report_title[2]
 report_title<- str_trim(report_title)
@@ -52,8 +52,12 @@ body<- mutate(body, Date=report_date)
 body<- mutate(body, Date= as.Date(body$Date, format= "%B %d, %Y"))
 Extracted_Inventory<- readRDS("Extracted_Inventory.rds")
 Extracted_Inventory<- bind_rows(Extracted_Inventory, body)
+Extracted_Inventory<- Extracted_Inventory %>% arrange(Date)
 saveRDS(Extracted_Inventory, "Extracted_Inventory.rds")
-Extracted_Inventory %>% filter(Grade %in% c("HTUSS", "HTR50H", "HTR50"), Length %in% c("17'06\"", "19'04\"", "15'07\"1/4\""), Size=="4") %>% ggplot(aes(Date, `Held Total`, col= Length)) + geom_line() + theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+```{r}
+Extracted_Inventory %>% filter(Grade %in% c("HTUSS", "HTR50H", "HTR50"), Length %in% c("17'06\"", "19'04\"", "15'07\"1/4\""), Size=="4") %>% group_by(Grade, Length) %>% summarize(total= sum(`Held Total`), Date) %>% ggplot(aes(Date, total, col= Length)) + geom_line() + theme(axis.text.x = element_text(angle=90, hjust=1))
 body %>% filter(Length=="19'04\"") %>% ggplot(aes(Grade, `Held Total`, col= Grade)) + geom_bar(stat = "identity", width = 0.2) +  theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
