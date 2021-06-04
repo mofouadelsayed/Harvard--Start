@@ -50,11 +50,10 @@ body<- bind_rows(body_1, body_2)
 body<- mutate_all(body, parse_guess)
 body<- mutate(body, Date=report_date) 
 body<- mutate(body, Date= as.Date(body$Date, format= "%B %d, %Y"))
-readRDS("Extracted_Inventory.rds")
+Extracted_Inventory<- readRDS("Extracted_Inventory.rds")
 Extracted_Inventory<- bind_rows(Extracted_Inventory, body)
 saveRDS(Extracted_Inventory, "Extracted_Inventory.rds")
-body %>% ggplot(aes(Length, `Held Total`, col= Grade)) + geom_bar(stat = "identity") +  theme(axis.text.x = element_text(angle=90, hjust=1))
+Extracted_Inventory %>% filter(Grade %in% c("HTUSS", "HTR50H", "HTR50"), Length %in% c("17'06\"", "19'04\"", "15'07\"1/4\""), Size=="4") %>% ggplot(aes(Date, `Held Total`, col= Length)) + geom_line() + theme(axis.text.x = element_text(angle=90, hjust=1))
 body %>% filter(Length=="19'04\"") %>% ggplot(aes(Grade, `Held Total`, col= Grade)) + geom_bar(stat = "identity", width = 0.2) +  theme(axis.text.x = element_text(angle=90, hjust=1))
-
 ```
 
