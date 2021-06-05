@@ -1276,14 +1276,17 @@ tab %>% ggplot(aes(Day, deaths, color= year)) + geom_line(size=1) + geom_vline(x
 **Exploring On My Own**
 - I'll try to import data from my weekly GR Inventory report to Rstudio & Analyze
 ```{r}
+library(tidyverse)
+library(pdftools)
+library(stringr)
+library(lubridate)
+
 # To list the files in a specific location. NOTICE the "\", if i used the opposite one it won't work
 list.files("C:/Users/Mohamed.Elsayad/Desktop")
 
 # Then to copy the desired file into my WD
 file_path<- ("C:/Users/Mohamed.Elsayad/Desktop/GR Weekly Inventory 12-Apr-21.pdf")
 file.copy(file_path, getwd())
-library(pdftools)
-library(stringr)
 raw_inventory<- pdf_text("GR Weekly Inventory 12-Apr-21.pdf")
 raw_inventory<- str_split(raw_inventory, "\n")
 report_date<- raw_inventory[[1]]
