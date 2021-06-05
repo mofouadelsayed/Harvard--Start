@@ -1307,6 +1307,10 @@ header_3<- str_split(header_3, "\\s{2,}+")
 Header<- c("Size","Length", "Grade", "Total", "Prime Treated", "Prime Untreated", "Fin Treated", "Fin Untreated", "Held Total", "Held Untreated", "Held Treated", "Met Released", "Met Unreleased")
 body_1<- raw_inventory[[1]]
 body_1<- body_1[7:33]
+<<<<<<< HEAD
+check<- str_split_fixed(body_1, "\\s{2,}+", n=13) # Need to figue out how to keep the long sizes as 1 column
+
+=======
 body_1<- body_1 %>% str_replace_all("(\\d+')\\s*(\\d+)\\s*(\\d/\\d)", "\\1\\2\"\\3")
 body_1<- str_split_fixed(body_1, "\\s{2,}+", n=13)
 colnames(body_1)<- c("Size","Length", "Grade", "Total", "Prime Treated", "Prime Untreated", "Fin Treated", "Fin Untreated", "Held Total", "Held Untreated", "Held Treated", "Met Released", "Met Unreleased")
@@ -1322,6 +1326,7 @@ body<- mutate_all(body, parse_guess)
 body<- mutate(body, Date=report_date)
 body %>% ggplot(aes(Length, `Held Total`, col= Grade)) + geom_bar(stat = "identity") +  theme(axis.text.x = element_text(angle=90, hjust=1))
 body %>% filter(Length=="19'04\"") %>% ggplot(aes(Grade, `Held Total`, col= Grade)) + geom_bar(stat = "identity") +  theme(axis.text.x = element_text(angle=90, hjust=1))
+>>>>>>> 962285008edec455908e451523e7b80cfc0ee9be
 ```
 
  -
