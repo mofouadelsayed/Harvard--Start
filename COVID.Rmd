@@ -1,0 +1,90 @@
+---
+title: "COVID"
+author: "Mohamed Elsayed"
+date: "21/09/2021"
+output: pdf_document
+---
+
+
+```{r}
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+if(!require(scales)) install.packages("scales", repos = "http://cran.us.r-project.org")
+if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-project.org")
+if(!require(ggrepel)) install.packages("ggrepel", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(Amelia)) install.packages("Amelia", repos = "http://cran.us.r-project.org")
+if(!require(gcookbook)) install.packages("gcookbook", repos = "http://cran.us.r-project.org")
+if(!require(CatEncoders)) install.packages("CatEncoders", repos = "http://cran.us.r-project.org")
+if(!require(cleandata)) install.packages("cleandata", repos = "http://cran.us.r-project.org")
+if(!require(caTools)) install.packages("caTools", repos = "http://cran.us.r-project.org")
+```
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(scales)
+library(ggpubr)
+library(ggrepel)
+library(caret)
+library(Amelia)
+library(gcookbook)
+library(CatEncoders)
+library(cleandata)
+library(caTools)
+```
+
+- Load file from GitHub
+```{r}
+# Upload file to Github & enter link below
+# covid_alberta <- read_csv("covid-19-alberta-statistics-data.csv")
+```
+
+- Data Exploration
+```{r}
+# Exclude Unkown entries
+covid_alberta<- covid_alberta %>% filter(!Age_group== "Unknown") %>% filter(!Gender== "Unknown")
+
+# Daily cases clearly showing the pandemic waves
+daily_cases<-covid_alberta %>% group_by(Date) %>% summarize(Cases= n())
+daily_cases %>% ggplot(aes(Date, Cases)) + geom_line()
+
+# Cases by Age group & Gender
+covid_alberta %>% ggplot(aes(Age_group,fill=Gender)) + geom_bar() + theme(axis.text.x = element_text(angle=90, hjust=1))
+
+# Case status by Age Group
+covid_alberta %>% ggplot(aes(Age_group,fill=Status)) + geom_bar() + theme(axis.text.x = element_text(angle=90, hjust=1))
+
+# Status by Gender
+covid_alberta %>% ggplot(aes(Gender,fill=Status)) + geom_bar() +  scale_y_continuous(labels = comma) + geom_label(stat='count',aes(label=..count..), size=3,position="stack") + theme_minimal()
+
+# Death by Gender
+covid_alberta %>% filter(Status== "Died") %>% ggplot(aes(Gender,fill=Status)) + geom_bar() +  scale_y_continuous(labels = comma) + geom_label(stat='count',aes(label=..count..), size=3,position="stack") + theme_minimal()
+
+# Death by Gender & Age group
+covid_alberta %>% filter(Status== "Died") %>% ggplot(aes(Age_group,fill=Gender)) + geom_bar() +  scale_y_continuous(labels = comma) + geom_label(stat='count',aes(label=..count..), size=3,position="stack") + theme_minimal()
+
+# Cases by Zones
+covid_alberta %>% count(Zone) %>% ggplot(aes(reorder(Zone, -n), n)) + geom_bar(stat= "identity")
+
+# Deaths by Zone
+covid_alberta %>% filter(Status=="Died") %>% count(Zone) %>% ggplot(aes(reorder(Zone, -n), n)) + geom_bar(stat= "identity")
+```
+
+- Data Preparation
+```{r}
+# Converting the Type, Status & Gender variables to factors to be able to feed them into the model.
+df$Type = factor(df$Type,
+                 levels = c('Confirmed', 'Probable'),
+                 labels = c(1, 0))
+
+df$Status = factor(df$Status,
+                   levels = c('Active', 'Recovered','Died'),
+                   labels = c(1, 0,2))
+
+df$Gender = factor(df$Gender,
+                   levels = c('Male', 'Female'),
+                   labels = c(1, 0))
+```
+
