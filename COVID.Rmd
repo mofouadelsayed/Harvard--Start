@@ -53,16 +53,16 @@ library(party)
 ```{r}
 # Upload file to Github & enter link below
 covid_alberta <- read_csv("https://raw.githubusercontent.com/mofouadelsayed/Harvard.Capstone/main/covid-19-alberta-statistics-data.csv")
-```
 
-- Data Exploration
-```{r}
 # Rename Columns
 colnames(covid_alberta)<- c("Number", "Date", "Zone", "Gender", "Age_group", "Status", "Type")
 
 # Exclude Unkown entries
 covid_alberta<- covid_alberta %>% filter(!Age_group== "Unknown") %>% filter(!Gender== "Unknown") %>% filter(!Status== "Active")
+```
 
+- Data Exploration
+```{r}
 # Daily cases clearly showing the pandemic waves
 daily_cases<-covid_alberta %>% group_by(Date) %>% summarize(Cases= n())
 daily_cases %>% ggplot(aes(Date, Cases)) + geom_line()
@@ -139,35 +139,39 @@ unbal_glm_pred<- ifelse(predict(unbal_glm_fit, newdata = test, type = "response"
 # Confusion matrix resulting in very high inaccurate Accuracy as more than 99% of the case status is recovered "0". It's very visible as sensitivity is 0. We can try to fix this using over sampling to try to balance the data for better training of the model.
 confusionMatrix(as.factor(unbal_glm_pred), test$Status, positive = "1")
 
-Accuracy_results <- tibble(Method = "Unbalanced glm", Accuracy = confusionMatrix(as.factor(unbal_glm_pred), test$Status, positive = "1")$byClass["Balanced Accuracy"]) 
+Accuracy_results <- tibble(Method = "Unbalanced glm", Balanced_Accuracy = confusionMatrix(as.factor(unbal_glm_pred), test$Status, positive = "1")$byClass["Balanced Accuracy"]) 
 Accuracy_results
+```
+
+- Balancing Data using over & under sampling
+```{r}
+over<- ovun.sample(Status ~ ., data=train, method = "over", N= 412762)$data
+table(over$Status)
+
+under<- ovun.sample(Status~ ., data= train, method = "under", N= 4060)$data
+table(under$Status)
 ```
 
 - 2: Balanced glm model using over-sampling
 ```{r message=FALSE, warning=FALSE}
-over<- ovun.sample(Status ~ ., data=train, method = "over", N= 412762)$data
-table(over$Status)
-
 bal_glm_fit_over<- over %>% glm(Status ~ ., data=., family = "binomial")
 bal_glm_pred_over<- ifelse(predict(bal_glm_fit_over, newdata = test, type = "response") >0.5, 1, 0)
 
 confusionMatrix(as.factor(bal_glm_pred_over), test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Balanced Over-sampling glm", Accuracy = confusionMatrix(as.factor(bal_glm_pred_over), test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Balanced Over-sampling glm", Balanced_Accuracy = confusionMatrix(as.factor(bal_glm_pred_over), test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
 
 - 3: Balanced glm model using under-sampling (No difference from Over-sampling)
 ```{r message=FALSE, warning=FALSE}
-under<- ovun.sample(Status~ ., data= train, method = "under", N= 4060)$data
-table(under$Status)
 bal_glm_fit_under<- under %>% glm(Status ~ ., data=., family = "binomial")
 bal_glm_pred_under<- ifelse(predict(bal_glm_fit_under, newdata = test, type = "response") >0.5, 1, 0)
 
 confusionMatrix(as.factor(bal_glm_pred_under), test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Under-Balanced glm", Accuracy = confusionMatrix(as.factor(bal_glm_pred_under), test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Balanced Under-Sampling glm", Balanced_Accuracy = confusionMatrix(as.factor(bal_glm_pred_under), test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
@@ -179,49 +183,104 @@ tree_pred<- predict(tree, test)
 
 confusionMatrix(tree_pred, test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Unbalanced Ctree", Accuracy = confusionMatrix(tree_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Unbalanced Ctree", Balanced_Accuracy = confusionMatrix(tree_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
 
+- Ctree Balanced Over-sampling
+```{r}
+bal_ctree_over<- over %>% ctree(Status ~ ., data=.)
+bal_ctree_over_pred<- predict(bal_ctree_over, test)
+
+confusionMatrix(bal_ctree_over_pred, test$Status, positive = "1")
+
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Balanced Over-Sampling Ctree", Balanced_Accuracy = confusionMatrix(bal_ctree_over_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+
+Accuracy_results %>% knitr::kable()
+```
+
+
 - Ctree Balanced Under-Sampling
 ```{r}
-under_tree<- ovun.sample(Status~ ., data= train, method = "under", N= 4060)$data
-bal_ctree<- under_tree %>% ctree(Status ~ ., data=.)
+bal_ctree<- under %>% ctree(Status ~ ., data=.)
 bal_ctree_pred<- predict(bal_ctree, test)
 
 confusionMatrix(bal_ctree_pred, test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Under-Balanced Ctree", Accuracy = confusionMatrix(bal_ctree_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Balanced Under-Sampling Ctree", Balanced_Accuracy = confusionMatrix(bal_ctree_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
 
-- Cross Validation Unbalanced
+- Cross Validation Unbalanced glm
 ```{r message=FALSE, warning=FALSE}
-set.seed(8, sample.kind = "Rounding")
 control<- trainControl(method = "cv", number= 10, verboseIter = TRUE)
+set.seed(8, sample.kind = "Rounding")
 glm_cross<- train(Status ~ ., method= "glm", data= train, trControl=control)
 glm_cross_pred<- predict(glm_cross, test)
 
 confusionMatrix(glm_cross_pred, test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Unbalanced glm", Accuracy = confusionMatrix(glm_cross_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Unbalanced glm", Balanced_Accuracy = confusionMatrix(glm_cross_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
 
-- Cross Validation Under-Balanced
+- Cross Validation Over-Balanced glm
+```{r}
+control<- trainControl(method = "cv", number= 10, verboseIter = TRUE)
+set.seed(8, sample.kind = "Rounding")
+glm_cross_over<- train(Status ~ ., method= "glm", data= over, trControl=control)
+glm_cross_over_pred<- predict(glm_cross_over, test)
+
+confusionMatrix(glm_cross_over_pred, test$Status, positive = "1")
+
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Over-Balanced glm", Balanced_Accuracy = confusionMatrix(glm_cross_over_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+
+Accuracy_results %>% knitr::kable()
+```
+
+
+- Cross Validation Under-Balanced glm
 ```{r message=FALSE, warning=FALSE}
 control<- trainControl(method = "cv", number= 10, verboseIter = TRUE)
 set.seed(8, sample.kind = "Rounding")
-glm_cross_under<- train(Status ~ ., method= "glm", data= under_tree, trControl=control)
+glm_cross_under<- train(Status ~ ., method= "glm", data= under, trControl=control)
 glm_cross_under_pred<- predict(glm_cross_under, test)
 
 confusionMatrix(glm_cross_under_pred, test$Status, positive = "1")
 
-Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Under- Balanced glm", Accuracy = confusionMatrix(glm_cross_under_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Under-Balanced glm", Balanced_Accuracy = confusionMatrix(glm_cross_under_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
 
 Accuracy_results %>% knitr::kable()
 ```
 
+- Cross Validation Over-Balanced ctree
+```{r}
+control<- trainControl(method = "cv", number= 10, verboseIter = TRUE)
+set.seed(8, sample.kind = "Rounding")
+tree_corss_over<- over %>% ctree(Status ~ ., data=.)
+tree_cross_over_pred<- predict(tree_corss_over, test)
+
+confusionMatrix(tree_cross_over_pred, test$Status, positive = "1")
+
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Over-Balanced Ctree", Balanced_Accuracy = confusionMatrix(tree_cross_over_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+
+Accuracy_results %>% knitr::kable()
+```
+
+- Cross Validation Under-Balanced ctree
+```{r}
+control<- trainControl(method = "cv", number= 10, verboseIter = TRUE)
+set.seed(8, sample.kind = "Rounding")
+tree_corss_under<- under %>% ctree(Status ~ ., data=.)
+tree_cross_under_pred<- predict(tree_corss_under, test)
+
+confusionMatrix(tree_cross_under_pred, test$Status, positive = "1")
+
+Accuracy_results <- bind_rows(Accuracy_results, tibble(Method = "Cross-Validation Under-Balanced Ctree", Balanced_Accuracy = confusionMatrix(tree_cross_under_pred, test$Status, positive = "1")$byClass["Balanced Accuracy"])) 
+
+Accuracy_results %>% knitr::kable()
+Accuracy_results %>% arrange(desc(Balanced_Accuracy)) %>% knitr::kable()
+```
